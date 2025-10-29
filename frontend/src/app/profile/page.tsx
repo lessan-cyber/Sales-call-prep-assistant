@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea"; // Assuming Textarea exists or will be created
+import { Textarea } from "@/components/ui/textarea";
 
 export default function ProfilePage() {
   const supabase = createClient();
@@ -164,7 +164,6 @@ export default function ProfilePage() {
                     setFormState((prev) => ({ ...prev, portfolio: JSON.parse(e.target.value) }));
                   } catch (jsonError) {
                     // Handle invalid JSON input
-                    console.error("Invalid JSON for portfolio:", jsonError);
                     // Optionally set an error state for the user
                   }
                 }}
