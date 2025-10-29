@@ -3,7 +3,7 @@ import { Space_Mono } from "next/font/google";
 import "./globals.css";
 
 import { cn } from "@/lib/utils";
-
+import Link from "next/link";
 import { AuthProvider } from "@/components/providers/auth-provider";
 
 const spaceMono = Space_Mono({
@@ -29,6 +29,16 @@ export default function RootLayout({
           spaceMono.className
         )}
       >
+        <nav className="flex items-center justify-between p-4 bg-gray-800 text-white">
+          <Link href="/" className="text-lg font-bold">
+            Sales Prep AI
+          </Link>
+          <div className="space-x-4">
+            <Link href="/profile" className="hover:underline">
+              Profile
+            </Link>
+          </div>
+        </nav>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
