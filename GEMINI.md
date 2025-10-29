@@ -45,6 +45,9 @@ The MVP (Minimum Viable Product) includes the following features:
 
 *   **Test-Driven Development (TDD):** Development should follow a TDD approach. Write tests before writing the implementation code.
 *   **Continuous Integration (CI):** A CI pipeline should be set up to run tests and linting on every commit.
+*   **Code Reviews:** Code reviews are mandatory for all pull requests.
+*   **Documentation:** Maintain clear and concise documentation for all code and features.
+*   Use async functions for asynchronous operations.
 
 ## Development Setup (TODO)
 
