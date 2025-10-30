@@ -34,6 +34,9 @@ export default function RootLayout({
             Sales Prep AI
           </Link>
           <div className="space-x-4">
+            <Link href="/new-prep" className="hover:underline">
+              New Prep
+            </Link>
             <Link href="/profile" className="hover:underline">
               Profile
             </Link>
