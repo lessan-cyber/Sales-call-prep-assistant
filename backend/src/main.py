@@ -1,25 +1,47 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 
-from .routers import profile
+from .routers import profile, prep
+
+
+
 from .supabase_client import create_supabase
+
 from .utils.logger import info, error
 
 
+
+
+
 @asynccontextmanager
+
 async def lifespan(app: FastAPI):
+
     """Manage the Supabase client's lifecycle."""
+
     client = await create_supabase()
+
     app.state.supabase = client
+
     info("Supabase client initialized and attached to app state.")
+
     yield
+
     info("Supabase client closing.")
-    await client.close()
+
+    # await client.close()
+
+
+
 
 
 app = FastAPI(lifespan=lifespan)
 
+
+
 app.include_router(profile.router, prefix="/api/auth", tags=["Profile"])
+
+app.include_router(prep.router, prefix="/api", tags=["Prep"])
 
 
 @app.get("/")
