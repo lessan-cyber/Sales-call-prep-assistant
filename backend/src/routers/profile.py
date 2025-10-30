@@ -18,12 +18,11 @@ async def get_profile(
         await supabase.table("user_profiles")
         .select("company_name, company_description, industries_served, portfolio")
         .eq("id", current_user.id)
-        .single()
         .execute()
     )
     if not response.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
-    return response.data
+    return response.data[0]
 
 
 @router.post("/profile", response_model=UserProfile)
@@ -36,7 +35,11 @@ async def upsert_profile(
     profile_dict = profile_data.model_dump()
     profile_dict["id"] = str(current_user.id)
 
-    response = await supabase.table("user_profiles").upsert(profile_dict).execute()
+    response = (
+        await supabase.table("user_profiles")
+        .upsert(profile_dict, on_conflict="id", returning="representation")
+        .execute()
+    )
 
     if not response.data:
         raise HTTPException(
