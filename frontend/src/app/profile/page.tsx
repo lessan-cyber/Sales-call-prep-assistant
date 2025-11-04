@@ -322,7 +322,14 @@ export default function ProfilePage() {
               {formState.portfolio.map((project, index) => (
                 <Card key={index} className="relative">
                   <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg">Project {index + 1}</CardTitle>
+                    <div className="flex flex-col">
+                      <CardTitle className="text-lg">Project {index + 1}</CardTitle>
+                      {formState.portfolio.length === MIN_PORTFOLIO_ITEMS && (
+                        <span className="text-xs text-muted-foreground mt-1">
+                          A minimum of {MIN_PORTFOLIO_ITEMS} projects is required
+                        </span>
+                      )}
+                    </div>
                     {formState.portfolio.length > MIN_PORTFOLIO_ITEMS && (
                       <Button
                         type="button"
