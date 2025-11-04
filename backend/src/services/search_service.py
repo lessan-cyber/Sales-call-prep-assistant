@@ -39,7 +39,7 @@ class SearchService:
             }
 
             research = search(params)
-            results = research.get_dict()
+            results = research
 
             # Extract organic results
             organic_results = []
@@ -84,14 +84,42 @@ class SearchService:
             }
 
         except Exception as e:
+            error_msg = str(e).lower()
             error(f"Error performing search for query '{query}': {e}")
-            return {
-                "success": False,
-                "query": query,
-                "error": str(e),
-                "organic_results": [],
-                "news_results": [],
-            }
+
+            # Check for specific error types
+            if "quota" in error_msg or "billing" in error_msg:
+                return {
+                    "success": False,
+                    "query": query,
+                    "error": f"API quota exceeded: {str(e)}. Please check your SerpAPI billing.",
+                    "organic_results": [],
+                    "news_results": [],
+                }
+            elif "429" in error_msg or "rate limit" in error_msg:
+                return {
+                    "success": False,
+                    "query": query,
+                    "error": f"API rate limit exceeded: {str(e)}. Please try again later.",
+                    "organic_results": [],
+                    "news_results": [],
+                }
+            elif any(code in error_msg for code in ["500", "502", "503", "504"]):
+                return {
+                    "success": False,
+                    "query": query,
+                    "error": f"SerpAPI server error: {str(e)}. Please try again later.",
+                    "organic_results": [],
+                    "news_results": [],
+                }
+            else:
+                return {
+                    "success": False,
+                    "query": query,
+                    "error": f"Search failed: {str(e)}",
+                    "organic_results": [],
+                    "news_results": [],
+                }
 
     async def find_company_website(self, company_name: str) -> Optional[str]:
         """

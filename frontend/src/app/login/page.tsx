@@ -19,15 +19,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
-  const { session, loading: authLoading } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     info("LoginPage mounted.");
-    if (session) {
-      info("User already logged in, redirecting to home.");
-      router.push('/'); // Redirect to home or dashboard
+    // Only redirect if both session and user are available
+    if (session && user !== undefined) {
+      // Check if user has a profile
+      // If user exists (has profile), redirect to home
+      // If user is null (no profile), redirect to profile
+      const destination = user ? '/' : '/profile';
+      info(`User already logged in, redirecting to ${destination}`);
+      router.push(destination);
     }
-  }, [session, router]);
+  }, [session, user, router]);
 
   // Render nothing if already logged in or auth state is loading
   if (authLoading) {
@@ -43,7 +48,7 @@ export default function LoginPage() {
     setLoading(true);
     setLoginError(null);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -51,9 +56,22 @@ export default function LoginPage() {
     if (signInError) {
       error(`Login failed: ${signInError.message}`);
       setLoginError(signInError.message);
-    } else {
-      info("Login successful, redirecting to home.");
-      router.push('/'); // Redirect to home or dashboard on successful login
+    } else if (data.session) {
+      // Fetch user profile and redirect based on whether profile exists
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${data.session.access_token}`,
+          },
+        });
+        const destination = response.ok ? '/' : '/profile';
+        info(`Login successful, redirecting to ${destination}`);
+        router.push(destination);
+      } catch (err) {
+        // On error, default to profile page
+        info("Login successful, redirecting to profile.");
+        router.push('/profile');
+      }
     }
     setLoading(false);
   };

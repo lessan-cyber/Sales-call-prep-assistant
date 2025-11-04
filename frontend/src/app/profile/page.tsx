@@ -8,19 +8,25 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit2, Mail, Building2, Tag, X } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 
-const MAX_PORTFOLIO_ITEMS = 5;
+const MIN_PORTFOLIO_ITEMS = 5;
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading, session } = useAuth();
+  const [isEditMode, setIsEditMode] = useState(false);
   const [formState, setFormState] = useState<UserProfile>({
     company_name: "",
     company_description: "",
     industries_served: [],
-    portfolio: [],
+    portfolio: Array(MIN_PORTFOLIO_ITEMS).fill(null).map(() => ({
+      name: "",
+      client_industry: "",
+      description: "",
+      key_outcomes: "",
+    })),
   });
   const [error, setError] = useState<string | null>(null);
   const isFormInitialized = useRef(false);
@@ -30,11 +36,12 @@ export default function ProfilePage() {
       if (!session) {
         router.push("/login");
       } else if (user) {
-        // If form is not initialized, or if the user object has changed (e.g., a different user logged in)
-        // and the current formState doesn't match the user's ID.
-        if (!isFormInitialized.current || (user.id && formState.id !== user.id)) {
+        // If form is not initialized, populate with user data
+        if (!isFormInitialized.current) {
           setFormState(user);
           isFormInitialized.current = true;
+          // Existing user with profile starts in view mode
+          setIsEditMode(false);
         }
       } else {
         // User is logged in but has no profile, initialize form for creation
@@ -44,9 +51,16 @@ export default function ProfilePage() {
             company_name: "",
             company_description: "",
             industries_served: [],
-            portfolio: [],
+            portfolio: Array(MIN_PORTFOLIO_ITEMS).fill(null).map(() => ({
+              name: "",
+              client_industry: "",
+              description: "",
+              key_outcomes: "",
+            })),
           });
           isFormInitialized.current = true;
+          // New user without profile starts in edit mode
+          setIsEditMode(true);
         }
       }
     }
@@ -69,20 +83,20 @@ export default function ProfilePage() {
   };
 
   const addProject = () => {
-    if (formState.portfolio.length < MAX_PORTFOLIO_ITEMS) {
-      setFormState((prev) => ({
-        ...prev,
-        portfolio: [
-          ...prev.portfolio,
-          { name: "", client_industry: "", description: "", key_outcomes: "" },
-        ],
-      }));
-    }
+    setFormState((prev) => ({
+      ...prev,
+      portfolio: [
+        ...prev.portfolio,
+        { name: "", client_industry: "", description: "", key_outcomes: "" },
+      ],
+    }));
   };
 
   const removeProject = (index: number) => {
-    const updatedPortfolio = formState.portfolio.filter((_, i) => i !== index);
-    setFormState((prev) => ({ ...prev, portfolio: updatedPortfolio }));
+    if (formState.portfolio.length > MIN_PORTFOLIO_ITEMS) {
+      const updatedPortfolio = formState.portfolio.filter((_, i) => i !== index);
+      setFormState((prev) => ({ ...prev, portfolio: updatedPortfolio }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,7 +105,7 @@ export default function ProfilePage() {
     // setLoading(true); // AuthProvider handles global loading
 
     try {
-      const response = await fetch("/api/auth/profile", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/profile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -114,7 +128,8 @@ export default function ProfilePage() {
 
       const data = await response.json();
       alert("Profile saved successfully!");
-      router.push("/");
+      // Return to view mode after saving
+      setIsEditMode(false);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -122,8 +137,128 @@ export default function ProfilePage() {
     }
   };
 
+  const handleCancel = () => {
+    // Reset form state to current user data and exit edit mode
+    if (user) {
+      setFormState(user);
+    }
+    setIsEditMode(false);
+    setError(null);
+  };
+
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center"><p>Loading profile...</p></div>;
+  }
+
+  // View Mode: Show settings-style layout for users with existing profiles
+  if (!isEditMode && user) {
+    return (
+      <div className="container mx-auto p-4 sm:p-6 md:p-8 max-w-4xl">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Profile Settings</h1>
+            <p className="text-muted-foreground">Manage your account and portfolio information</p>
+          </div>
+          <Button onClick={() => setIsEditMode(true)} className="flex items-center gap-2">
+            <Edit2 className="h-4 w-4" />
+            Edit Profile
+          </Button>
+        </div>
+
+        <div className="space-y-6">
+          {/* Account Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Account Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                <p className="mt-1">{session?.user?.email || "Not available"}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Company Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Company Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Company Name</Label>
+                <p className="mt-1 font-medium">{user.company_name || "Not set"}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Company Description</Label>
+                <p className="mt-1">{user.company_description || "No description"}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Industries Served</Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {user.industries_served && user.industries_served.length > 0 ? (
+                    user.industries_served.map((industry, idx) => (
+                      <div key={idx} className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
+                        <Tag className="h-3 w-3" />
+                        {industry}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No industries specified</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Portfolio */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Portfolio Projects</CardTitle>
+              <CardDescription>
+                {user.portfolio?.length || 0} project{user.portfolio?.length !== 1 ? "s" : ""} in your portfolio
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {user.portfolio && user.portfolio.length > 0 ? (
+                  user.portfolio.map((project, index) => (
+                    <div key={index} className="p-4 border rounded-lg bg-muted/30">
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-semibold text-lg">{project.name || `Project ${index + 1}`}</h4>
+                        {project.client_industry && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                            {project.client_industry}
+                          </span>
+                        )}
+                      </div>
+                      {project.description && (
+                        <p className="text-sm text-muted-foreground mb-2">{project.description}</p>
+                      )}
+                      {project.key_outcomes && (
+                        <div className="mt-2">
+                          <Label className="text-xs font-medium text-muted-foreground">Key Outcomes</Label>
+                          <p className="text-sm mt-1">{project.key_outcomes}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No projects in portfolio</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -178,7 +313,7 @@ export default function ProfilePage() {
             <div>
               <h3 className="text-lg font-medium">Portfolio</h3>
               <p className="text-sm text-muted-foreground">
-                Add up to {MAX_PORTFOLIO_ITEMS} projects. This will be used by the AI to find relevant experience.
+                Add at least {MIN_PORTFOLIO_ITEMS} projects. This will be used by the AI to find relevant experience.
               </p>
             </div>
 
@@ -225,10 +360,10 @@ export default function ProfilePage() {
                       <Label htmlFor={`description-${index}`}>Description</Label>
                       <Textarea
                         id={`description-${index}`}
-                        placeholder="Briefly describe the project (max 200 chars)"
+                        placeholder="Briefly describe the project (max 500 chars)"
                         value={project.description}
                         onChange={(e) => handlePortfolioChange(index, "description", e.target.value)}
-                        maxLength={200}
+                        maxLength={500}
                         required
                       />
                     </div>
@@ -247,16 +382,27 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            {formState.portfolio.length < MAX_PORTFOLIO_ITEMS && (
+            {formState.portfolio.length >= MIN_PORTFOLIO_ITEMS && (
               <Button type="button" variant="outline" onClick={addProject}>
                 Add New Project
               </Button>
             )}
 
-            <div className="pt-4">
-              <Button type="submit" className="w-full" disabled={loading}>
+            <div className="pt-4 flex gap-4">
+              <Button type="submit" className="flex-1" disabled={loading}>
                 {loading ? "Saving..." : "Save Profile"}
               </Button>
+              {user && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              )}
             </div>
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </form>

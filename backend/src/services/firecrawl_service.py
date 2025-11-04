@@ -35,30 +35,71 @@ class FirecrawlService:
             # Use the scrape method
             response = self.client.scrape(url, formats=formats)
 
-            if response.success:
+            # Check if response has success attribute or check the response structure
+            if hasattr(response, 'success'):
+                success = response.success
+                error_msg = getattr(response, 'error', None)
+                data = response.data if hasattr(response, 'data') else response
+            else:
+                # New API structure - check if response is valid
+                success = True
+                error_msg = None
+                data = response
+
+            if success:
                 info(f"Successfully scraped: {url}")
                 return {
                     "success": True,
                     "url": url,
-                    "content": response.data.content,
-                    "markdown": response.data.markdown
-                    if hasattr(response.data, "markdown")
+                    "content": data.content if hasattr(data, 'content') else str(data),
+                    "markdown": data.markdown
+                    if hasattr(data, "markdown")
                     else None,
-                    "metadata": response.data.metadata,
+                    "metadata": data.metadata if hasattr(data, 'metadata') else {},
                     "source": "firecrawl",
                 }
             else:
-                error(f"Failed to scrape {url}: {response.error}")
+                error(f"Failed to scrape {url}: {error_msg}")
                 return {
                     "success": False,
                     "url": url,
-                    "error": response.error,
+                    "error": error_msg,
                     "content": None,
                 }
 
         except Exception as e:
+            error_msg = str(e).lower()
             error(f"Error scraping {url}: {e}")
-            return {"success": False, "url": url, "error": str(e), "content": None}
+
+            # Check for specific error types
+            if "quota" in error_msg or "billing" in error_msg:
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": f"API quota exceeded: {str(e)}. Please check your Firecrawl billing.",
+                    "content": None,
+                }
+            elif "429" in error_msg or "rate limit" in error_msg:
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": f"API rate limit exceeded: {str(e)}. Please try again later.",
+                    "content": None,
+                }
+            elif any(code in error_msg for code in ["500", "502", "503", "504"]):
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": f"Firecrawl server error: {str(e)}. Please try again later.",
+                    "content": None,
+                }
+            else:
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": f"Scraping failed: {str(e)}",
+                    "content": None,
+                }
 
     async def extract_with_schema(
         self, url: str, schema: Dict[str, Any]
@@ -78,26 +119,67 @@ class FirecrawlService:
 
             response = self.client.scrape(url, extract={"schema": schema})
 
-            if response.success:
+            # Check if response has success attribute or check the response structure
+            if hasattr(response, 'success'):
+                success = response.success
+                error_msg = getattr(response, 'error', None)
+                data = response.data if hasattr(response, 'data') else response
+            else:
+                # New API structure - check if response is valid
+                success = True
+                error_msg = None
+                data = response
+
+            if success:
                 info(f"Successfully extracted structured data from: {url}")
                 return {
                     "success": True,
                     "url": url,
-                    "data": response.data.extracted,
+                    "data": data.extracted if hasattr(data, 'extracted') else str(data),
                     "source": "firecrawl_extract",
                 }
             else:
-                error(f"Failed to extract from {url}: {response.error}")
+                error(f"Failed to extract from {url}: {error_msg}")
                 return {
                     "success": False,
                     "url": url,
-                    "error": response.error,
+                    "error": error_msg,
                     "data": None,
                 }
 
         except Exception as e:
+            error_msg = str(e).lower()
             error(f"Error extracting from {url}: {e}")
-            return {"success": False, "url": url, "error": str(e), "data": None}
+
+            # Check for specific error types
+            if "quota" in error_msg or "billing" in error_msg:
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": f"API quota exceeded: {str(e)}. Please check your Firecrawl billing.",
+                    "data": None,
+                }
+            elif "429" in error_msg or "rate limit" in error_msg:
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": f"API rate limit exceeded: {str(e)}. Please try again later.",
+                    "data": None,
+                }
+            elif any(code in error_msg for code in ["500", "502", "503", "504"]):
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": f"Firecrawl server error: {str(e)}. Please try again later.",
+                    "data": None,
+                }
+            else:
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": f"Extraction failed: {str(e)}",
+                    "data": None,
+                }
 
 
 # Global instance

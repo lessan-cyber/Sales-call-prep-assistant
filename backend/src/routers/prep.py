@@ -136,6 +136,7 @@ async def create_prep(
         prep_report = await sales_brief_synthesizer.synthesize_sales_brief(
             research_data=research_data,
             user_profile=user_profile,
+            user_id=str(current_user.id),
             meeting_objective=prep_request.meeting_objective
         )
 
@@ -217,7 +218,15 @@ async def get_prep_report(
         )
 
     try:
-        prep_report = PrepReport.model_validate_json(prep_data["prep_data"])
+        # Check if prep_data is already a dict or needs JSON parsing
+        prep_data_value = prep_data["prep_data"]
+        if isinstance(prep_data_value, str):
+            # It's a JSON string, parse it
+            prep_report = PrepReport.model_validate_json(prep_data_value)
+        else:
+            # It's already a dict, validate directly
+            prep_report = PrepReport.model_validate(prep_data_value)
+
         return prep_report
     except Exception as e:
         error(f"Error parsing prep_data from database: {e}")

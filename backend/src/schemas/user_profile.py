@@ -7,7 +7,7 @@ class PortfolioItem(BaseModel):
     name: str
     client_industry: str
     description: str = Field(
-        ..., max_length=200, description="A brief description of the project."
+        ..., max_length=500, description="A brief description of the project."
     )
     key_outcomes: str = Field(
         ..., description="The key results and outcomes of the project."
@@ -22,4 +22,4 @@ class UserProfile(BaseModel):
         ..., max_length=500, description="What the user's company does."
     )
     industries_served: list[str]
-    portfolio: list[PortfolioItem] = Field(..., max_items=10)
+    portfolio: list[PortfolioItem] = Field(..., min_items=5, max_items=10)
