@@ -12,7 +12,7 @@ def get_supabase_client(request: Request) -> AsyncClient:
     return request.app.state.supabase
 
 
-def get_current_user(
+async def get_current_user(
     token: str = Depends(oauth2_scheme),
     supabase: AsyncClient = Depends(get_supabase_client),
 ) -> User:
@@ -24,8 +24,8 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
-        user = supabase.auth.get_user(token)
-        return user
+        response = await supabase.auth.get_user(token)
+        return response.user
     except AuthApiError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
