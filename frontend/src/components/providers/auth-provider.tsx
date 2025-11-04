@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Session } from '@supabase/supabase-js';
 
 import { createClient } from '@/lib/supabase/client';
-import { UserProfile } from '@/types/user_profile'; // Corrected import path
+import { UserProfile } from '@/types/user_profile';
 
 interface AuthContextType {
   session: Session | null;
@@ -33,17 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        fetchUserProfile(session.user.id, session.access_token);
-      }
-      setLoading(false);
-    });
-
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, []);
 
   const fetchUserProfile = async (userId: string, accessToken: string) => {
     try {
