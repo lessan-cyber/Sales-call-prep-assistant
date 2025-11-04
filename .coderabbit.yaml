@@ -1,0 +1,159 @@
+# CodeRabbit Configuration for Sales-call-prep-assistant
+# Optimized for Python/FastAPI backend and TypeScript/Next.js frontend
+
+language: en-US
+tone_instructions: "Be concise and focus on critical issues. Prioritize security, performance, and code quality. Follow Google Python Style Guide and Google TypeScript Style Guide as documented in CLAUDE.md."
+
+reviews:
+  profile: assertive
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - "wip"
+      - "draft"
+      - "fixup"
+    labels:
+      - "bug"
+      - "feature"
+      - "enhancement"
+      - "refactor"
+      - "docs"
+      - "test"
+  request_changes_workflow: false
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  suggested_reviewers: true
+  auto_assign_reviewers: false
+  path_filters:
+    - "!node_modules/**"
+    - "!.next/**"
+    - "!dist/**"
+    - "!build/**"
+    - "!__pycache__/**"
+    - "!*.pyc"
+    - "!.venv/**"
+    - "!.env/**"
+  path_instructions:
+    - path: "**/*.py"
+      instructions: "Review Python code following Google Python Style Guide. Check for: proper type hints, docstrings for all public functions, async/await usage, error handling, security best practices (no hardcoded secrets, SQL injection prevention), FastAPI best practices (proper dependencies, Pydantic models), and performance considerations."
+    - path: "backend/src/routers/*.py"
+      instructions: "Review FastAPI router code for: proper HTTP status codes, request/response models, authentication, error handling, and API documentation quality."
+    - path: "backend/src/agents/**/*.py"
+      instructions: "Review agent code for: proper tool usage, error handling, retry logic, confidence scoring logic, and caching implementation."
+    - path: "**/*.ts"
+      instructions: "Review TypeScript code following Google TypeScript Style Guide. Check for: proper types, React hooks usage, Next.js App Router patterns, component structure, and performance optimization."
+    - path: "**/*.tsx"
+      instructions: "Review React components for: proper state management, props typing, accessibility (a11y), responsive design with Tailwind CSS, and Next.js best practices."
+    - path: "**/*.md"
+      instructions: "Review markdown files for: proper formatting, code block syntax, link validity, and documentation clarity."
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+
+  pre_merge_checks:
+    docstrings:
+      mode: warning
+      threshold: 80
+    title:
+      mode: warning
+      requirements: "Title should be concise and descriptive. Use conventional commits format: feat/, fix/, refactor/, docs/, test/, chore/"
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+    custom_checks:
+      - mode: error
+        name: "Environment variables check"
+        instructions: "Verify that no hardcoded API keys, passwords, or sensitive data exist in the code. Check for .env references and ensure they're properly documented in .env.example. This check applies to all code changes."
+      - mode: error
+        name: "Security scan"
+        instructions: "Scan for potential security vulnerabilities: SQL injection patterns, XSS vulnerabilities in React code, insecure HTTP requests, missing input validation, and insecure file operations."
+      - mode: warning
+        name: "Database migration check"
+        instructions: "If SQL files are modified, ensure migrations are properly structured and backward compatible. Check that migration files follow the existing naming convention (e.g., 0001_tables.sql)."
+
+tools:
+  ruff:
+    enabled: true
+  flake8:
+    enabled: true
+  pylint:
+    enabled: true
+  eslint:
+    enabled: true
+  biome:
+    enabled: true
+  gitleaks:
+    enabled: true
+  shellcheck:
+    enabled: true
+  markdownlint:
+    enabled: true
+  actionlint:
+    enabled: true
+  yaml:
+    enabled: true
+  hadolint:
+    enabled: true
+  checkov:
+    enabled: true
+  osv_scanner:
+    enabled: true
+  semgrep:
+    enabled: true
+  dotenv_lint:
+    enabled: true
+
+chat:
+  auto_reply: true
+  art: true
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/CLAUDE.md"
+      - "**/GEMINI.md"
+      - "**/.cursorrules"
+      - "**/CODING_STANDARDS.md"
+      - "**/.github/copilot-instructions.md"
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local
+
+code_generation:
+  docstrings:
+    language: en-US
+    path_instructions:
+      - path: "**/*.py"
+        instructions: "Generate Google-style docstrings with Args, Returns, and Raises sections for all public functions and classes."
+      - path: "**/*.tsx"
+        instructions: "Add JSDoc comments for React components including Props interface documentation."
+  unit_tests:
+    path_instructions:
+      - path: "**/*.py"
+        instructions: "Generate pytest-compatible unit tests with proper mocking for external services (Supabase, APIs)."
+      - path: "**/*.tsx"
+        instructions: "Generate Jest tests with React Testing Library for component behavior and user interactions."
+
+early_access: false
