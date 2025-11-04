@@ -3,7 +3,7 @@
 from typing import Optional, Dict, Any
 from firecrawl import Firecrawl
 from ..config import settings
-from ..utils.logger import info, error
+from ..utils.logger import info, error, warning
 
 
 class FirecrawlService:
@@ -81,10 +81,27 @@ class FirecrawlService:
 
             if success:
                 info(f"Successfully scraped: {url}")
+
+                # Safely extract content with fallback priority:
+                # 1. content attribute
+                # 2. dict['text'] or dict['body']
+                # 3. text attribute
+                # 4. empty string (with warning)
+                if hasattr(data, 'content'):
+                    content = data.content
+                elif isinstance(data, dict):
+                    content = data.get('text') or data.get('body')
+                else:
+                    content = getattr(data, 'text', '')
+
+                if not content:
+                    warning(f"No content field found in response from {url}")
+                    content = ''
+
                 return {
                     "success": True,
                     "url": url,
-                    "content": data.content if hasattr(data, 'content') else str(data),
+                    "content": content,
                     "markdown": data.markdown
                     if hasattr(data, "markdown")
                     else None,
@@ -198,10 +215,27 @@ class FirecrawlService:
 
             if success:
                 info(f"Successfully extracted structured data from: {url}")
+
+                # Safely extract data with fallback priority:
+                # 1. extracted attribute
+                # 2. dict['extracted']
+                # 3. getattr extracted attribute
+                # 4. empty string (with warning)
+                if hasattr(data, 'extracted'):
+                    extracted_data = data.extracted
+                elif isinstance(data, dict):
+                    extracted_data = data.get('extracted')
+                else:
+                    extracted_data = getattr(data, 'extracted', '')
+
+                if not extracted_data:
+                    warning(f"No extracted data field found in response from {url}")
+                    extracted_data = ''
+
                 return {
                     "success": True,
                     "url": url,
-                    "data": data.extracted if hasattr(data, 'extracted') else str(data),
+                    "data": extracted_data,
                     "source": "firecrawl_extract",
                 }
             else:
