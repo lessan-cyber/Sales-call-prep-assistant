@@ -1,7 +1,7 @@
 """Agent B - Sales Brief Synthesizer."""
 
+import asyncio
 import os
-import time
 from typing import Dict, Any
 from pydantic_ai import Agent
 from pydantic import BaseModel
@@ -11,7 +11,7 @@ from ...schemas.prep_report import PrepReport
 from .tools.search_portfolio import search_portfolio_tool
 
 
-async def run_synthesizer_with_retry(agent: Agent, prompt: str, max_retries: int = 3) -> Any:
+async def run_synthesizer_with_retry(agent: Agent, prompt: str, max_retries: int = 3) -> Any:  # type: ignore[misc]
     """
     Run the sales synthesizer agent with retry logic for handling API errors.
 
@@ -39,14 +39,12 @@ async def run_synthesizer_with_retry(agent: Agent, prompt: str, max_retries: int
             # Check if this is a retryable error
             is_rate_limit = "429" in error_msg or "rate limit" in error_msg
             is_quota_exceeded = "quota" in error_msg or "billing" in error_msg
-            is_server_error = any(code in error_msg for code in ["500", "502", "503", "504"])
-            is_overloaded = "overloaded" in error_msg or "busy" in error_msg
             is_invalid = "invalid" in error_msg and "argument" in error_msg
 
             # Non-retryable errors
             if is_invalid:
                 error(f"Non-retryable error: {e}")
-                raise e
+                raise
 
             if attempt < max_retries - 1:
                 # Calculate backoff delay (exponential: 1s, 2s, 4s)
@@ -58,9 +56,9 @@ async def run_synthesizer_with_retry(agent: Agent, prompt: str, max_retries: int
                     delay = min(delay * 2, 30)  # Longer delay for rate limits
                 elif is_quota_exceeded:
                     error(f"Quota exceeded: {e}. Not retrying.")
-                    raise e
+                    raise
 
-                time.sleep(delay)
+                await asyncio.sleep(delay)
             else:
                 error(f"All {max_retries} attempts failed. Last error: {e}")
 
