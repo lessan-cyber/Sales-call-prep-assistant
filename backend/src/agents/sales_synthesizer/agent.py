@@ -5,7 +5,7 @@ from typing import Dict, Any
 from pydantic_ai import Agent
 from pydantic import BaseModel, ValidationError
 from ...config import settings
-from ...utils.logger import info
+from ...utils.logger import info, error
 from ...schemas.prep_report import PrepReport
 from ...utils.retry import run_agent_with_retry
 from .tools.search_portfolio import search_portfolio_tool
