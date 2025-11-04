@@ -1,6 +1,8 @@
 """Agent A - Research Orchestrator with tool-calling."""
 
 import os
+import time
+import json
 from typing import Dict, Any, List
 from pydantic_ai import Agent
 from requests import api
@@ -11,6 +13,62 @@ from .tools.scrape_website import scrape_website_tool
 from .tools.get_company_linkedin import get_company_linkedin_tool
 from .tools.search_linkedin_profile import search_linkedin_profile_tool
 from .tools.scrape_linkedin_posts import scrape_linkedin_posts_tool
+
+
+async def run_with_retry(agent: Agent, prompt: str, max_retries: int = 3) -> Any:
+    """
+    Run an agent with retry logic for handling API errors.
+
+    Args:
+        agent: The pydantic_ai agent to run
+        prompt: The prompt to send to the agent
+        max_retries: Maximum number of retry attempts
+
+    Returns:
+        The agent result
+
+    Raises:
+        Exception: If all retries are exhausted
+    """
+    last_error = None
+
+    for attempt in range(max_retries):
+        try:
+            result = await agent.run(prompt)
+            return result
+        except Exception as e:
+            last_error = e
+            error_msg = str(e).lower()
+
+            # Check if this is a retryable error
+            is_rate_limit = "429" in error_msg or "rate limit" in error_msg
+            is_quota_exceeded = "quota" in error_msg or "billing" in error_msg
+            is_server_error = any(code in error_msg for code in ["500", "502", "503", "504"])
+            is_overloaded = "overloaded" in error_msg or "busy" in error_msg
+
+            # Non-retryable errors
+            if "invalid" in error_msg and "argument" in error_msg:
+                error(f"Non-retryable error: {e}")
+                raise e
+
+            if attempt < max_retries - 1:
+                # Calculate backoff delay (exponential: 1s, 2s, 4s)
+                delay = 2 ** attempt
+                error(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay}s...")
+
+                # Additional delay for specific error types
+                if is_rate_limit:
+                    delay = min(delay * 2, 30)  # Longer delay for rate limits
+                elif is_quota_exceeded:
+                    error(f"Quota exceeded: {e}. Not retrying.")
+                    raise e
+
+                time.sleep(delay)
+            else:
+                error(f"All {max_retries} attempts failed. Last error: {e}")
+
+    # If we get here, all retries failed
+    raise last_error
 
 
 class ResearchOrchestrator:
@@ -63,7 +121,8 @@ class ResearchOrchestrator:
                 "- decision_makers: [{name, title, linkedin_url, background, recent_activity}]\n"
                 "- research_limitations: [list of any data gaps]\n"
                 "- overall_confidence: score from 0.0 to 1.0\n"
-                "- sources_used: [list of sources]\n"
+                "- sources_used: [list of sources]\n\n"
+                "IMPORTANT: Return your research as a valid JSON object. Do not include any markdown formatting or additional text - just the JSON data.\n"
             ),
         )
 
@@ -97,22 +156,61 @@ class ResearchOrchestrator:
         }
 
         try:
-            # Run the agent with tool-calling
-            result = await self.agent.run(
+            # Run the agent with retry logic
+            prompt = (
                 f"Research {company_name} for a sales meeting. "
                 f"Meeting objective: {meeting_objective}. "
                 f"Contact person: {contact_person_name if contact_person_name else 'Not provided'}. "
                 f"LinkedIn URL: {contact_linkedin_url if contact_linkedin_url else 'Not provided'}. "
-                f"Gather comprehensive intelligence to help prepare for this sales call."
+                f"Gather comprehensive intelligence to help prepare for this sales call. "
+                f"Return the research as a JSON object with these fields: "
+                f"company_intelligence, decision_makers, research_limitations, overall_confidence, sources_used."
             )
+            result = await run_with_retry(self.agent, prompt)
 
             info(f"Research completed for {company_name}")
+
+            # Get the result data - handle different pydantic_ai versions
+            if hasattr(result, 'data'):
+                result_data = result.data
+            elif hasattr(result, 'output'):
+                result_data = result.output
+            else:
+                # Fallback to str representation
+                result_data = str(result)
+
+            # Ensure result_data is a dictionary
+            if isinstance(result_data, str):
+                # Try to parse as JSON
+                try:
+                    result_data = json.loads(result_data)
+                except json.JSONDecodeError:
+                    error(f"Could not parse research data as JSON: {result_data}")
+                    result_data = {
+                        "company_intelligence": {
+                            "name": company_name,
+                            "description": "Unable to parse research data"
+                        },
+                        "decision_makers": [],
+                        "research_limitations": ["Research data format invalid"],
+                        "overall_confidence": 0.1,
+                        "sources_used": []
+                    }
+
+            # Extract sources and confidence from result
+            if isinstance(result_data, dict):
+                sources_used = result_data.get("sources_used", [])
+                confidence_score = result_data.get("overall_confidence", 0.5)
+            else:
+                sources_used = []
+                confidence_score = 0.5
+
             return {
                 "success": True,
                 "company_name": company_name,
-                "research_data": result.data,
-                "sources_used": result.data.get("sources_used", []),
-                "confidence_score": result.data.get("overall_confidence", 0.5),
+                "research_data": result_data,
+                "sources_used": sources_used,
+                "confidence_score": confidence_score,
             }
 
         except Exception as e:
