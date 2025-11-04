@@ -129,17 +129,17 @@ class FirecrawlService:
                 # 1. content attribute
                 # 2. dict['text'] or dict['body']
                 # 3. text attribute
-                # 4. empty string (with warning)
+                # 4. None (with warning)
                 if hasattr(data, 'content'):
                     content = data.content
                 elif isinstance(data, dict):
                     content = data.get('text') or data.get('body')
                 else:
-                    content = getattr(data, 'text', '')
+                    content = getattr(data, 'text', None)
 
                 if not content:
                     warning(f"No content field found in response from {url}")
-                    content = ''
+                    content = None
 
                 return {
                     "success": True,
@@ -192,17 +192,17 @@ class FirecrawlService:
                 # 1. extracted attribute
                 # 2. dict['extracted']
                 # 3. getattr extracted attribute
-                # 4. empty string (with warning)
+                # 4. None (with warning)
                 if hasattr(data, 'extracted'):
                     extracted_data = data.extracted
                 elif isinstance(data, dict):
                     extracted_data = data.get('extracted')
                 else:
-                    extracted_data = getattr(data, 'extracted', '')
+                    extracted_data = getattr(data, 'extracted', None)
 
                 if not extracted_data:
                     warning(f"No extracted data field found in response from {url}")
-                    extracted_data = ''
+                    extracted_data = None
 
                 return {
                     "success": True,
