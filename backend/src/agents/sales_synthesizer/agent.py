@@ -3,7 +3,7 @@
 import os
 from typing import Dict, Any
 from pydantic_ai import Agent
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from ...config import settings
 from ...utils.logger import info
 from ...schemas.prep_report import PrepReport
@@ -142,13 +142,13 @@ class SalesBriefSynthesizer:
             if isinstance(result_data, dict):
                 try:
                     prep_report = PrepReport.model_validate(result_data)
-                except Exception as e:
+                except ValidationError as e:
                     error(f"Error validating PrepReport: {e}")
                     # Create error report
                     return self._create_error_report(meeting_objective, str(e))
             else:
                 # result_data is neither dict nor valid JSON string
-                raise Exception(f"Agent returned unexpected data type: {type(result_data)}")
+                raise TypeError(f"Agent returned unexpected data type: {type(result_data)}")
 
             info("Sales brief synthesis completed successfully")
             return prep_report
