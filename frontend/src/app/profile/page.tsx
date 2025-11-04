@@ -34,15 +34,24 @@ export default function ProfilePage() {
         return;
       }
       setUser(user);
-      fetchProfile(user.id);
+      fetchProfile();
     };
 
     getUser();
   }, [router, supabase]);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async () => {
     try {
-      const response = await fetch(`/api/auth/profile?userId=${userId}`);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/profile`, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
       if (!response.ok) {
         throw new Error("Failed to fetch profile");
       }
@@ -74,11 +83,15 @@ export default function ProfilePage() {
     setLoading(true);
 
     try {
-      const method = profile ? "PUT" : "POST";
-      const response = await fetch("/api/auth/profile", {
-        method,
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/profile`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify(formState),
       });
