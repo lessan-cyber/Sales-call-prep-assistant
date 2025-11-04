@@ -41,10 +41,43 @@ class FirecrawlService:
                 error_msg = getattr(response, 'error', None)
                 data = response.data if hasattr(response, 'data') else response
             else:
-                # New API structure - check if response is valid
-                success = True
+                # New API structure - validate response before assuming success
+                success = False
                 error_msg = None
-                data = response
+                data = None
+
+                # Validate response structure - check for expected keys
+                if hasattr(response, 'data'):
+                    data = response.data
+                    success = True
+                elif hasattr(response, 'content'):
+                    # Response has content but no explicit success flag
+                    # Check if it looks like a valid response
+                    data = response
+                    success = True
+                elif isinstance(response, dict):
+                    # Check for common response patterns
+                    if 'data' in response:
+                        data = response['data']
+                        success = True
+                        error_msg = response.get('error')
+                    elif 'content' in response:
+                        data = response
+                        success = True
+                        error_msg = response.get('error')
+                    elif 'error' in response:
+                        # Explicit error in response
+                        success = False
+                        error_msg = response.get('error', 'Unknown error')
+                        data = None
+                    else:
+                        # Unknown dict structure
+                        error(f"Unexpected response structure from Firecrawl: {response}")
+                        error_msg = f"Unexpected response format: {response}"
+                else:
+                    # Unexpected type
+                    error(f"Unexpected response type from Firecrawl: {type(response).__name__}")
+                    error_msg = f"Unexpected response type: {type(response).__name__}"
 
             if success:
                 info(f"Successfully scraped: {url}")
@@ -125,10 +158,43 @@ class FirecrawlService:
                 error_msg = getattr(response, 'error', None)
                 data = response.data if hasattr(response, 'data') else response
             else:
-                # New API structure - check if response is valid
-                success = True
+                # New API structure - validate response before assuming success
+                success = False
                 error_msg = None
-                data = response
+                data = None
+
+                # Validate response structure - check for expected keys
+                if hasattr(response, 'data'):
+                    data = response.data
+                    success = True
+                elif hasattr(response, 'content'):
+                    # Response has content but no explicit success flag
+                    # Check if it looks like a valid response
+                    data = response
+                    success = True
+                elif isinstance(response, dict):
+                    # Check for common response patterns
+                    if 'data' in response:
+                        data = response['data']
+                        success = True
+                        error_msg = response.get('error')
+                    elif 'content' in response:
+                        data = response
+                        success = True
+                        error_msg = response.get('error')
+                    elif 'error' in response:
+                        # Explicit error in response
+                        success = False
+                        error_msg = response.get('error', 'Unknown error')
+                        data = None
+                    else:
+                        # Unknown dict structure
+                        error(f"Unexpected response structure from Firecrawl: {response}")
+                        error_msg = f"Unexpected response format: {response}"
+                else:
+                    # Unexpected type
+                    error(f"Unexpected response type from Firecrawl: {type(response).__name__}")
+                    error_msg = f"Unexpected response type: {type(response).__name__}"
 
             if success:
                 info(f"Successfully extracted structured data from: {url}")
