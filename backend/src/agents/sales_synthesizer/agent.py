@@ -148,7 +148,9 @@ class SalesBriefSynthesizer:
                     return self._create_error_report(meeting_objective, str(e))
             else:
                 # result_data is neither dict nor valid JSON string
-                raise TypeError(f"Agent returned unexpected data type: {type(result_data)}")
+                raise TypeError(
+                    f"Agent returned unexpected data type: {type(result_data)}"
+                ) from None
 
             info("Sales brief synthesis completed successfully")
             return prep_report
