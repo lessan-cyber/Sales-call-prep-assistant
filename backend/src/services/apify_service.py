@@ -25,15 +25,33 @@ class ApifyService:
         try:
             info(f"Scraping LinkedIn data for company: {company_name}")
 
-            # Run the actor - try without companyName first (some actors use different params)
-            # Many LinkedIn company scrapers need the company URL, not name
-            clean_name = ''.join(c for c in company_name if c.isalnum())
-            company_url = f"https://www.linkedin.com/company/{clean_name}/"
+            # Try to discover the actual LinkedIn company URL via search
+            from .search_service import search_service
 
-            run_input = {
-                "startUrls": [{"url": company_url}],
-                "maxResults": 1
-            }
+            search_query = f'"{company_name}" LinkedIn company site:linkedin.com/company'
+            search_results = await search_service.search(search_query, num_results=5)
+
+            run_input = {}
+
+            if search_results.get("success") and search_results.get("organic_results"):
+                # Find the LinkedIn company URL from search results
+                for result in search_results["organic_results"]:
+                    link = result.get("link", "")
+                    if "linkedin.com/company/" in link:
+                        info(f"Found LinkedIn URL for {company_name}: {link}")
+                        run_input = {
+                            "startUrls": [{"url": link}],
+                            "maxResults": 1
+                        }
+                        break
+
+            # If no URL found, try using the company's name directly
+            if not run_input:
+                info(f"No LinkedIn URL found for {company_name}, using company name")
+                run_input = {
+                    "companyName": company_name,
+                    "maxResults": 1
+                }
 
             actor_id = "scrapeverse/linkedin-company-profile-scraper"
             run = self.client.actor(actor_id).call(run_input=run_input)
@@ -224,14 +242,33 @@ class ApifyService:
         try:
             info(f"Scraping LinkedIn posts for: {company_name}")
 
-            # Clean company name for URL (remove spaces, special chars)
-            clean_name = ''.join(c for c in company_name if c.isalnum())
-            company_url = f"https://www.linkedin.com/company/{clean_name}/"
+            # Try to discover the actual LinkedIn company URL via search
+            from .search_service import search_service
 
-            run_input = {
-                "urls": [company_url],
-                "maxPosts": limit
-            }
+            search_query = f'"{company_name}" LinkedIn company site:linkedin.com/company'
+            search_results = await search_service.search(search_query, num_results=5)
+
+            run_input = {}
+
+            if search_results.get("success") and search_results.get("organic_results"):
+                # Find the LinkedIn company URL from search results
+                for result in search_results["organic_results"]:
+                    link = result.get("link", "")
+                    if "linkedin.com/company/" in link:
+                        info(f"Found LinkedIn URL for {company_name}: {link}")
+                        run_input = {
+                            "urls": [link],
+                            "maxPosts": limit
+                        }
+                        break
+
+            # If no URL found, try using the company's name directly
+            if not run_input:
+                info(f"No LinkedIn URL found for {company_name}, using company name")
+                run_input = {
+                    "companyName": company_name,
+                    "maxPosts": limit
+                }
 
             actor_id = "supreme_coder/linkedin-post"
             run = self.client.actor(actor_id).call(run_input=run_input)

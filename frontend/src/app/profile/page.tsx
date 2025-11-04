@@ -12,6 +12,7 @@ import { Trash2, Edit2, Mail, Building2, Tag, X } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 
 const MIN_PORTFOLIO_ITEMS = 5;
+const MAX_PORTFOLIO_ITEMS = 20;
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -313,7 +314,7 @@ export default function ProfilePage() {
             <div>
               <h3 className="text-lg font-medium">Portfolio</h3>
               <p className="text-sm text-muted-foreground">
-                Add at least {MIN_PORTFOLIO_ITEMS} projects. This will be used by the AI to find relevant experience.
+                Add at least {MIN_PORTFOLIO_ITEMS} projects (maximum {MAX_PORTFOLIO_ITEMS}). This will be used by the AI to find relevant experience.
               </p>
             </div>
 
@@ -322,16 +323,18 @@ export default function ProfilePage() {
                 <Card key={index} className="relative">
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-lg">Project {index + 1}</CardTitle>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={() => removeProject(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Remove project</span>
-                    </Button>
+                    {formState.portfolio.length > MIN_PORTFOLIO_ITEMS && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => removeProject(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Remove project</span>
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid w-full items-center gap-1.5">
@@ -382,7 +385,7 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            {formState.portfolio.length >= MIN_PORTFOLIO_ITEMS && (
+            {formState.portfolio.length < MAX_PORTFOLIO_ITEMS && (
               <Button type="button" variant="outline" onClick={addProject}>
                 Add New Project
               </Button>

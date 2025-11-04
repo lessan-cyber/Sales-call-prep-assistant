@@ -64,7 +64,38 @@ describe('ProfilePage', () => {
       company_name: 'Test Co',
       company_description: 'A test company',
       industries_served: ['Tech', 'Finance'],
-      portfolio: [],
+      portfolio: [
+        {
+          name: 'Test Project 1',
+          client_industry: 'Technology',
+          description: 'A test project description',
+          key_outcomes: 'Key outcomes from this project',
+        },
+        {
+          name: 'Test Project 2',
+          client_industry: 'Finance',
+          description: 'Another test project',
+          key_outcomes: 'Results achieved',
+        },
+        {
+          name: 'Test Project 3',
+          client_industry: 'Healthcare',
+          description: 'Third test project',
+          key_outcomes: 'Successful implementation',
+        },
+        {
+          name: 'Test Project 4',
+          client_industry: 'Education',
+          description: 'Fourth test project',
+          key_outcomes: 'Positive impact',
+        },
+        {
+          name: 'Test Project 5',
+          client_industry: 'Retail',
+          description: 'Fifth test project',
+          key_outcomes: 'Growth metrics',
+        },
+      ],
     };
     mockGetUser.mockResolvedValueOnce({ data: { user: mockUser } });
     (fetch as jest.Mock).mockResolvedValueOnce({
@@ -114,7 +145,38 @@ describe('ProfilePage', () => {
             company_name: 'New Company',
             company_description: 'Description of new company',
             industries_served: ['Retail', 'Marketing'],
-            portfolio: [],
+            portfolio: [
+              {
+                name: 'Project 1',
+                client_industry: 'Technology',
+                description: 'A sample project description',
+                key_outcomes: 'Key outcomes from this project',
+              },
+              {
+                name: 'Project 2',
+                client_industry: 'Technology',
+                description: 'Another sample project',
+                key_outcomes: 'Results achieved',
+              },
+              {
+                name: 'Project 3',
+                client_industry: 'Technology',
+                description: 'Third sample project',
+                key_outcomes: 'Successful outcomes',
+              },
+              {
+                name: 'Project 4',
+                client_industry: 'Technology',
+                description: 'Fourth sample project',
+                key_outcomes: 'Positive impact',
+              },
+              {
+                name: 'Project 5',
+                client_industry: 'Technology',
+                description: 'Fifth sample project',
+                key_outcomes: 'Growth metrics',
+              },
+            ],
           }),
         })
       );
@@ -129,7 +191,38 @@ describe('ProfilePage', () => {
       company_name: 'Old Co',
       company_description: 'Old description',
       industries_served: ['Old Industry'],
-      portfolio: [],
+      portfolio: [
+        {
+          name: 'Old Project 1',
+          client_industry: 'Manufacturing',
+          description: 'An existing project',
+          key_outcomes: 'Results achieved',
+        },
+        {
+          name: 'Old Project 2',
+          client_industry: 'Manufacturing',
+          description: 'Another existing project',
+          key_outcomes: 'Success metrics',
+        },
+        {
+          name: 'Old Project 3',
+          client_industry: 'Manufacturing',
+          description: 'Third existing project',
+          key_outcomes: 'Business impact',
+        },
+        {
+          name: 'Old Project 4',
+          client_industry: 'Manufacturing',
+          description: 'Fourth existing project',
+          key_outcomes: 'Quality improvements',
+        },
+        {
+          name: 'Old Project 5',
+          client_industry: 'Manufacturing',
+          description: 'Fifth existing project',
+          key_outcomes: 'Cost savings',
+        },
+      ],
     };
     mockGetUser.mockResolvedValueOnce({ data: { user: mockUser } });
     (fetch as jest.Mock)
@@ -159,7 +252,38 @@ describe('ProfilePage', () => {
             company_name: 'Updated Co',
             company_description: 'Old description',
             industries_served: ['Old Industry'],
-            portfolio: [],
+            portfolio: [
+              {
+                name: 'Old Project 1',
+                client_industry: 'Manufacturing',
+                description: 'An existing project',
+                key_outcomes: 'Results achieved',
+              },
+              {
+                name: 'Old Project 2',
+                client_industry: 'Manufacturing',
+                description: 'Another existing project',
+                key_outcomes: 'Success metrics',
+              },
+              {
+                name: 'Old Project 3',
+                client_industry: 'Manufacturing',
+                description: 'Third existing project',
+                key_outcomes: 'Business impact',
+              },
+              {
+                name: 'Old Project 4',
+                client_industry: 'Manufacturing',
+                description: 'Fourth existing project',
+                key_outcomes: 'Quality improvements',
+              },
+              {
+                name: 'Old Project 5',
+                client_industry: 'Manufacturing',
+                description: 'Fifth existing project',
+                key_outcomes: 'Cost savings',
+              },
+            ],
           }),
         })
       );

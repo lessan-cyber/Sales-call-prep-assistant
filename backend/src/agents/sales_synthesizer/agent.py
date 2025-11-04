@@ -1,71 +1,14 @@
 """Agent B - Sales Brief Synthesizer."""
 
 import os
-import time
 from typing import Dict, Any
 from pydantic_ai import Agent
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from ...config import settings
 from ...utils.logger import info, error
 from ...schemas.prep_report import PrepReport
+from ...utils.retry import run_agent_with_retry
 from .tools.search_portfolio import search_portfolio_tool
-
-
-async def run_synthesizer_with_retry(agent: Agent, prompt: str, max_retries: int = 3) -> Any:
-    """
-    Run the sales synthesizer agent with retry logic for handling API errors.
-
-    Args:
-        agent: The pydantic_ai agent to run
-        prompt: The prompt to send to the agent
-        max_retries: Maximum number of retry attempts
-
-    Returns:
-        The agent result
-
-    Raises:
-        Exception: If all retries are exhausted
-    """
-    last_error = None
-
-    for attempt in range(max_retries):
-        try:
-            result = await agent.run(prompt)
-            return result
-        except Exception as e:
-            last_error = e
-            error_msg = str(e).lower()
-
-            # Check if this is a retryable error
-            is_rate_limit = "429" in error_msg or "rate limit" in error_msg
-            is_quota_exceeded = "quota" in error_msg or "billing" in error_msg
-            is_server_error = any(code in error_msg for code in ["500", "502", "503", "504"])
-            is_overloaded = "overloaded" in error_msg or "busy" in error_msg
-            is_invalid = "invalid" in error_msg and "argument" in error_msg
-
-            # Non-retryable errors
-            if is_invalid:
-                error(f"Non-retryable error: {e}")
-                raise e
-
-            if attempt < max_retries - 1:
-                # Calculate backoff delay (exponential: 1s, 2s, 4s)
-                delay = 2 ** attempt
-                error(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay}s...")
-
-                # Additional delay for specific error types
-                if is_rate_limit:
-                    delay = min(delay * 2, 30)  # Longer delay for rate limits
-                elif is_quota_exceeded:
-                    error(f"Quota exceeded: {e}. Not retrying.")
-                    raise e
-
-                time.sleep(delay)
-            else:
-                error(f"All {max_retries} attempts failed. Last error: {e}")
-
-    # If we get here, all retries failed
-    raise last_error
 
 
 class SalesBriefSynthesizer:
@@ -159,7 +102,7 @@ class SalesBriefSynthesizer:
                 f"IMPORTANT: When using the search_portfolio tool, always pass user_id={user_id} as the first parameter."
             )
 
-            result = await run_synthesizer_with_retry(self.agent, prompt)
+            result = await run_agent_with_retry(self.agent, prompt)
 
             # Get the result data - handle different pydantic_ai versions
             if hasattr(result, 'data'):
@@ -199,13 +142,13 @@ class SalesBriefSynthesizer:
             if isinstance(result_data, dict):
                 try:
                     prep_report = PrepReport.model_validate(result_data)
-                except Exception as e:
+                except ValidationError as e:
                     error(f"Error validating PrepReport: {e}")
                     # Create error report
                     return self._create_error_report(meeting_objective, str(e))
             else:
                 # result_data is neither dict nor valid JSON string
-                raise Exception(f"Agent returned unexpected data type: {type(result_data)}")
+                raise TypeError(f"Agent returned unexpected data type: {type(result_data)}")
 
             info("Sales brief synthesis completed successfully")
             return prep_report

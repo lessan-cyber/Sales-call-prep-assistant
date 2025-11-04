@@ -3,7 +3,7 @@
 from typing import Optional, Dict, Any
 from firecrawl import Firecrawl
 from ..config import settings
-from ..utils.logger import info, error
+from ..utils.logger import info, error, warning
 
 
 class FirecrawlService:
@@ -12,6 +12,90 @@ class FirecrawlService:
     def __init__(self):
         """Initialize the Firecrawl client."""
         self.client = Firecrawl(api_key=settings.FIRECRAWL_API_KEY)
+
+    def _parse_response(self, response) -> tuple[bool, Any, Optional[str]]:
+        """
+        Parse Firecrawl response handling both legacy and new API structures.
+
+        Args:
+            response: The response from Firecrawl client
+
+        Returns:
+            Tuple of (success: bool, data: Any, error_msg: Optional[str])
+        """
+        if hasattr(response, 'success'):
+            success = response.success
+            error_msg = getattr(response, 'error', None)
+            data = response.data if hasattr(response, 'data') else response
+        else:
+            success = False
+            error_msg = None
+            data = None
+
+            # Validate response structure - check for expected keys
+            if hasattr(response, 'data'):
+                data = response.data
+                success = True
+            elif hasattr(response, 'content'):
+                # Response has content but no explicit success flag
+                # Check if it looks like a valid response
+                data = response
+                success = True
+            elif isinstance(response, dict):
+                # Check for common response patterns
+                if 'data' in response:
+                    data = response['data']
+                    success = True
+                    error_msg = response.get('error')
+                elif 'content' in response:
+                    data = response
+                    success = True
+                    error_msg = response.get('error')
+                elif 'error' in response:
+                    # Explicit error in response
+                    success = False
+                    error_msg = response.get('error', 'Unknown error')
+                    data = None
+                else:
+                    # Unknown dict structure
+                    error(f"Unexpected response structure from Firecrawl: {response}")
+                    error_msg = f"Unexpected response format: {response}"
+            else:
+                # Unexpected type
+                error(f"Unexpected response type from Firecrawl: {type(response).__name__}")
+                error_msg = f"Unexpected response type: {type(response).__name__}"
+
+        return success, data, error_msg
+
+    def _categorize_error(self, url: str, exception: Exception, result_key: str = "content") -> Dict[str, Any]:
+        """
+        Categorize exceptions and return structured error response.
+
+        Args:
+            url: The URL that failed to scrape
+            exception: The exception that occurred
+            result_key: Key for the result field (content/data)
+
+        Returns:
+            Dictionary with structured error information
+        """
+        error_msg = str(exception).lower()
+
+        if "quota" in error_msg or "billing" in error_msg:
+            error_text = f"API quota exceeded: {exception!s}. Please check your Firecrawl billing."
+        elif "429" in error_msg or "rate limit" in error_msg:
+            error_text = f"API rate limit exceeded: {exception!s}. Please try again later."
+        elif any(code in error_msg for code in ["500", "502", "503", "504"]):
+            error_text = f"Firecrawl server error: {exception!s}. Please try again later."
+        else:
+            error_text = f"Scraping failed: {exception!s}"
+
+        return {
+            "success": False,
+            "url": url,
+            "error": error_text,
+            result_key: None,
+        }
 
     async def scrape_website(
         self, url: str, formats: Optional[list] = None
@@ -35,23 +119,32 @@ class FirecrawlService:
             # Use the scrape method
             response = self.client.scrape(url, formats=formats)
 
-            # Check if response has success attribute or check the response structure
-            if hasattr(response, 'success'):
-                success = response.success
-                error_msg = getattr(response, 'error', None)
-                data = response.data if hasattr(response, 'data') else response
-            else:
-                # New API structure - check if response is valid
-                success = True
-                error_msg = None
-                data = response
+            # Parse response using shared helper
+            success, data, error_msg = self._parse_response(response)
 
             if success:
                 info(f"Successfully scraped: {url}")
+
+                # Safely extract content with fallback priority:
+                # 1. content attribute
+                # 2. dict['text'] or dict['body']
+                # 3. text attribute
+                # 4. None (with warning)
+                if hasattr(data, 'content'):
+                    content = data.content
+                elif isinstance(data, dict):
+                    content = data.get('text') or data.get('body')
+                else:
+                    content = getattr(data, 'text', None)
+
+                if not content:
+                    warning(f"No content field found in response from {url}")
+                    content = None
+
                 return {
                     "success": True,
                     "url": url,
-                    "content": data.content if hasattr(data, 'content') else str(data),
+                    "content": content,
                     "markdown": data.markdown
                     if hasattr(data, "markdown")
                     else None,
@@ -68,38 +161,8 @@ class FirecrawlService:
                 }
 
         except Exception as e:
-            error_msg = str(e).lower()
             error(f"Error scraping {url}: {e}")
-
-            # Check for specific error types
-            if "quota" in error_msg or "billing" in error_msg:
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": f"API quota exceeded: {str(e)}. Please check your Firecrawl billing.",
-                    "content": None,
-                }
-            elif "429" in error_msg or "rate limit" in error_msg:
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": f"API rate limit exceeded: {str(e)}. Please try again later.",
-                    "content": None,
-                }
-            elif any(code in error_msg for code in ["500", "502", "503", "504"]):
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": f"Firecrawl server error: {str(e)}. Please try again later.",
-                    "content": None,
-                }
-            else:
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": f"Scraping failed: {str(e)}",
-                    "content": None,
-                }
+            return self._categorize_error(url, e)
 
     async def extract_with_schema(
         self, url: str, schema: Dict[str, Any]
@@ -119,23 +182,32 @@ class FirecrawlService:
 
             response = self.client.scrape(url, extract={"schema": schema})
 
-            # Check if response has success attribute or check the response structure
-            if hasattr(response, 'success'):
-                success = response.success
-                error_msg = getattr(response, 'error', None)
-                data = response.data if hasattr(response, 'data') else response
-            else:
-                # New API structure - check if response is valid
-                success = True
-                error_msg = None
-                data = response
+            # Parse response using shared helper
+            success, data, error_msg = self._parse_response(response)
 
             if success:
                 info(f"Successfully extracted structured data from: {url}")
+
+                # Safely extract data with fallback priority:
+                # 1. extracted attribute
+                # 2. dict['extracted']
+                # 3. getattr extracted attribute
+                # 4. None (with warning)
+                if hasattr(data, 'extracted'):
+                    extracted_data = data.extracted
+                elif isinstance(data, dict):
+                    extracted_data = data.get('extracted')
+                else:
+                    extracted_data = getattr(data, 'extracted', None)
+
+                if not extracted_data:
+                    warning(f"No extracted data field found in response from {url}")
+                    extracted_data = None
+
                 return {
                     "success": True,
                     "url": url,
-                    "data": data.extracted if hasattr(data, 'extracted') else str(data),
+                    "data": extracted_data,
                     "source": "firecrawl_extract",
                 }
             else:
@@ -148,38 +220,8 @@ class FirecrawlService:
                 }
 
         except Exception as e:
-            error_msg = str(e).lower()
             error(f"Error extracting from {url}: {e}")
-
-            # Check for specific error types
-            if "quota" in error_msg or "billing" in error_msg:
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": f"API quota exceeded: {str(e)}. Please check your Firecrawl billing.",
-                    "data": None,
-                }
-            elif "429" in error_msg or "rate limit" in error_msg:
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": f"API rate limit exceeded: {str(e)}. Please try again later.",
-                    "data": None,
-                }
-            elif any(code in error_msg for code in ["500", "502", "503", "504"]):
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": f"Firecrawl server error: {str(e)}. Please try again later.",
-                    "data": None,
-                }
-            else:
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": f"Extraction failed: {str(e)}",
-                    "data": None,
-                }
+            return self._categorize_error(url, e, result_key="data")
 
 
 # Global instance
