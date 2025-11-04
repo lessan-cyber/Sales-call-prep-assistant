@@ -23,7 +23,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (session) {
-      router.push('/'); // Redirect to home or dashboard
+      router.push('/profile'); // Redirect to profile page
     }
   }, [session, router]);
 
