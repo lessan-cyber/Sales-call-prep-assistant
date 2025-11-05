@@ -69,7 +69,10 @@ interface PrepReportPDFProps {
 // Styles for the PDF
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
+    paddingTop: 40,
+    paddingLeft: 40,
+    paddingRight: 40,
+    paddingBottom: 60,
     fontSize: 11,
     lineHeight: 1.5,
   },
@@ -77,6 +80,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderBottom: "2px solid #3b82f6",
     paddingBottom: 15,
+    paddingTop: 5,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  pageNumberHeader: {
+    fontSize: 9,
+    color: "#64748b",
   },
   title: {
     fontSize: 24,
@@ -265,7 +278,12 @@ export const PrepReportPDF: React.FC<PrepReportPDFProps> = ({
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Sales Prep Report</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Sales Prep Report</Text>
+            <Text style={styles.pageNumberHeader}>
+              Page <Text render={({ pageNumber }) => `${pageNumber}`} fixed />
+            </Text>
+          </View>
           <Text style={styles.subtitle}>Company: {companyName}</Text>
           <View style={styles.overallConfidence}>
             <Text style={styles.subtitle}>Overall Confidence: </Text>
@@ -502,13 +520,14 @@ export const PrepReportPDF: React.FC<PrepReportPDFProps> = ({
         )}
 
         {/* Footer */}
-        <Text
-          style={styles.footer}
-          render={({ pageNumber, totalPages }) =>
-            `Generated on ${new Date().toLocaleDateString()} | Page ${pageNumber} of ${totalPages}`
-          }
-          fixed
-        />
+        <View style={styles.footer}>
+          <Text
+            render={({ pageNumber, totalPages }) =>
+              `Page ${pageNumber} of ${totalPages} | Generated on ${new Date().toLocaleDateString()}`
+            }
+            fixed
+          />
+        </View>
       </Page>
     </Document>
   );
