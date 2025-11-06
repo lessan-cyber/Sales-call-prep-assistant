@@ -10,8 +10,8 @@ import os
 
 
 async def generate_prep_report_with_gemini(
-    prep_request: BaseModel,  # Using BaseModel for now, will be PrepRequest from router
-    current_user: BaseModel,  # Using BaseModel for now, will be User from gotrue
+    prep_request: BaseModel,
+    current_user: BaseModel,
     research_result: dict,
 ) -> PrepReport:
     """Generates a sales prep report using Google Gemini AI."""

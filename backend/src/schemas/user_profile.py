@@ -22,4 +22,4 @@ class UserProfile(BaseModel):
         ..., max_length=500, description="What the user's company does."
     )
     industries_served: list[str]
-    portfolio: list[PortfolioItem] = Field(..., min_items=5, max_items=10)
+    portfolio: list[PortfolioItem] = Field(..., min_length=5, max_length=10)

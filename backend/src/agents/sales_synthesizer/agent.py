@@ -35,13 +35,81 @@ class SalesBriefSynthesizer:
                 "- search_portfolio: Find relevant user projects based on prospect context\n"
                 "  Use this AFTER understanding the prospect's challenges\n"
                 "  IMPORTANT: You will receive user_id in the prompt - always pass it to search_portfolio tool\n\n"
-                "Generate a comprehensive sales brief with these sections:\n"
-                "1. Executive Summary (TL;DR)\n"
-                "2. Strategic Narrative (dream outcome, proof of achievement, pain points)\n"
-                "3. Talking Points & Pitch Angles (opening hook, key points, leverage)\n"
-                "4. Insightful Questions to Ask (strategic, technical, business impact, qualification)\n"
-                "5. Key Decision Makers (if contact info provided)\n"
-                "6. Company Intelligence (industry, size, recent news, strategic initiatives)\n\n"
+                "STRICT JSON OUTPUT FORMAT:\n"
+                "You MUST return a JSON object with EXACTLY these fields:\n\n"
+                "{\n"
+                '  "executive_summary": {\n'
+                '    "the_client": "string - company description and strategic focus",\n'
+                '    "our_angle": "string - how user goals align with prospect",\n'
+                '    "call_goal": "string - clear objective for this meeting",\n'
+                '    "confidence": 0.0\n'
+                "  },\n"
+                '  "strategic_narrative": {\n'
+                '    "dream_outcome": "string - what prospect wants to achieve",\n'
+                '    "proof_of_achievement": [\n'
+                "      {\n"
+                '        "project_name": "string - portfolio project name",\n'
+                '        "relevance": "string - why this project is relevant",\n'
+                '        "relevance_score": 0.0\n'
+                "      }\n"
+                "    ],\n"
+                '    "pain_points": [\n'
+                "      {\n"
+                '        "pain": "string - description of pain point",\n'
+                '        "urgency": 1,\n'
+                '        "impact": 1,\n'
+                '        "evidence": ["string"]\n'
+                "      }\n"
+                "    ],\n"
+                '    "confidence": 0.0\n'
+                "  },\n"
+                '  "talking_points": {\n'
+                '    "opening_hook": "string - specific observation to start",\n'
+                '    "key_points": ["string"],\n'
+                '    "competitive_context": "string - leverage their context",\n'
+                '    "confidence": 0.0\n'
+                "  },\n"
+                '  "questions_to_ask": {\n'
+                '    "strategic": ["string"],\n'
+                '    "technical": ["string"],\n'
+                '    "business_impact": ["string"],\n'
+                '    "qualification": ["string"],\n'
+                '    "confidence": 0.0\n'
+                "  },\n"
+                '  "decision_makers": {\n'
+                '    "profiles": [\n'
+                "      {\n"
+                '        "name": "string",\n'
+                '        "title": "string",\n'
+                '        "linkedin_url": "string",\n'
+                '        "background_points": ["string"]\n'
+                "      }\n"
+                "    ],\n"
+                '    "confidence": 0.0\n'
+                "  },\n"
+                '  "company_intelligence": {\n'
+                '    "industry": "string - specific sector/vertical",\n'
+                '    "company_size": "string - employee count + revenue",\n'
+                '    "recent_news": [\n'
+                "      {\n"
+                '        "headline": "string",\n'
+                '        "date": "string",\n'
+                '        "significance": "string"\n'
+                "      }\n"
+                "    ],\n"
+                '    "strategic_initiatives": ["string"],\n'
+                '    "confidence": 0.0\n'
+                "  },\n"
+                '  "research_limitations": ["string"],\n'
+                '  "overall_confidence": 0.0,\n'
+                '  "sources": ["string"]\n'
+                "}\n\n"
+                "CRITICAL REQUIREMENTS:\n"
+                "1. Use EXACT field names shown above (the_client NOT summary, confidence NOT confidence_score)\n"
+                "2. pain_points must be objects with pain, urgency, impact, evidence fields - NOT strings\n"
+                "3. proof_of_achievement must be objects with project_name, relevance, relevance_score - NOT strings\n"
+                "4. All confidence scores must be floats between 0.0 and 1.0\n"
+                "5. Return ONLY the JSON object, no markdown formatting\n\n"
                 "Strategy:\n"
                 "1. First identify prospect's pain points from research\n"
                 "2. Call search_portfolio to find relevant user projects\n"
@@ -55,8 +123,7 @@ class SalesBriefSynthesizer:
                 "- Questions: High (0.8-1.0) as these use proven frameworks\n"
                 "- Decision Makers: Based on data source (LinkedIn direct = 0.85-0.95)\n"
                 "- Company Intelligence: Based on data freshness and source quality\n\n"
-                "Return the complete PrepReport as specified in the schema.\n\n"
-                "IMPORTANT: Return your response as a valid JSON object only. Do not include any markdown formatting or additional text - just the JSON data that matches the PrepReport schema."
+                "Return ONLY valid JSON matching this exact schema."
             ),
         )
 
@@ -148,7 +215,9 @@ class SalesBriefSynthesizer:
                     return self._create_error_report(meeting_objective, str(e))
             else:
                 # result_data is neither dict nor valid JSON string
-                raise TypeError(f"Agent returned unexpected data type: {type(result_data)}")
+                raise TypeError(
+                    f"Agent returned unexpected data type: {type(result_data)}"
+                ) from None
 
             info("Sales brief synthesis completed successfully")
             return prep_report

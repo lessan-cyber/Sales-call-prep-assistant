@@ -44,8 +44,8 @@ class TestSearchService:
             }
         }
 
-        with patch("backend.src.services.search_service.search") as mock_search:
-            mock_search.return_value.get_dict.return_value = mock_results
+        with patch.object(search_service.client, "search") as mock_search:
+            mock_search.return_value = mock_results
 
             result = await search_service.search("Acme Corp", num_results=10)
 
@@ -73,8 +73,8 @@ class TestSearchService:
             }
         }
 
-        with patch("backend.src.services.search_service.search") as mock_search:
-            mock_search.return_value.get_dict.return_value = mock_results
+        with patch.object(search_service.client, "search") as mock_search:
+            mock_search.return_value = mock_results
 
             result = await search_service.search("Test Query")
 
@@ -85,7 +85,7 @@ class TestSearchService:
     @pytest.mark.asyncio
     async def test_search_error_handling(self, search_service):
         """Test error handling during search."""
-        with patch("backend.src.services.search_service.search") as mock_search:
+        with patch.object(search_service.client, "search") as mock_search:
             mock_search.side_effect = Exception("API error")
 
             result = await search_service.search("Error Query")
@@ -103,8 +103,8 @@ class TestSearchService:
             }
         }
 
-        with patch("backend.src.services.search_service.search") as mock_search:
-            mock_search.return_value.get_dict.return_value = mock_results
+        with patch.object(search_service.client, "search") as mock_search:
+            mock_search.return_value = mock_results
 
             result = await search_service.search("Nonexistent Company XYZ123")
 
@@ -117,15 +117,15 @@ class TestSearchService:
         """Test that num_results parameter is respected."""
         mock_results = {
             "organic_results": [
-                {"title": f"Result {i}", "link": f"https://test{i}.com", 
+                {"title": f"Result {i}", "link": f"https://test{i}.com",
                  "snippet": f"Snippet {i}", "position": i}
                 for i in range(1, 21)
             ],
             "search_information": {"total_results": 1000}
         }
 
-        with patch("backend.src.services.search_service.search") as mock_search:
-            mock_search.return_value.get_dict.return_value = mock_results
+        with patch.object(search_service.client, "search") as mock_search:
+            mock_search.return_value = mock_results
 
             result = await search_service.search("Test", num_results=5)
 

@@ -45,16 +45,42 @@ class TestProfileRouter:
             company_name="New Company",
             company_description="A new consulting firm",
             industries_served=["Tech"],
-            portfolio=[]
+            portfolio=[
+                {
+                    "name": "Project 1",
+                    "client_industry": "Technology",
+                    "description": "A test project",
+                    "key_outcomes": "Test results"
+                },
+                {
+                    "name": "Project 2",
+                    "client_industry": "Healthcare",
+                    "description": "Another test project",
+                    "key_outcomes": "More test results"
+                },
+                {
+                    "name": "Project 3",
+                    "client_industry": "Finance",
+                    "description": "Third test project",
+                    "key_outcomes": "Additional test results"
+                },
+                {
+                    "name": "Project 4",
+                    "client_industry": "Retail",
+                    "description": "Fourth test project",
+                    "key_outcomes": "Further test results"
+                },
+                {
+                    "name": "Project 5",
+                    "client_industry": "Manufacturing",
+                    "description": "Fifth test project",
+                    "key_outcomes": "Final test results"
+                }
+            ]
         )
 
-        created_profile = {
-            "id": mock_user.id,
-            "company_name": "New Company",
-            "company_description": "A new consulting firm",
-            "industries_served": ["Tech"],
-            "portfolio": []
-        }
+        created_profile = profile_data.model_dump()
+        created_profile["id"] = mock_user.id
         mock_supabase_client.execute.return_value = Mock(data=[created_profile])
 
         result = await upsert_profile(
@@ -76,10 +102,34 @@ class TestProfileRouter:
             industries_served=["Tech", "Healthcare"],
             portfolio=[
                 {
-                    "project_name": "New Project",
+                    "name": "New Project",
+                    "client_industry": "Technology",
                     "description": "Latest work",
-                    "technologies": ["Python"],
-                    "results": "Great success"
+                    "key_outcomes": "Great success"
+                },
+                {
+                    "name": "Project 2",
+                    "client_industry": "Healthcare",
+                    "description": "Another project",
+                    "key_outcomes": "Good results"
+                },
+                {
+                    "name": "Project 3",
+                    "client_industry": "Finance",
+                    "description": "Third project",
+                    "key_outcomes": "Excellent outcomes"
+                },
+                {
+                    "name": "Project 4",
+                    "client_industry": "Retail",
+                    "description": "Fourth project",
+                    "key_outcomes": "Strong performance"
+                },
+                {
+                    "name": "Project 5",
+                    "client_industry": "Manufacturing",
+                    "description": "Fifth project",
+                    "key_outcomes": "Outstanding success"
                 }
             ]
         )
@@ -95,7 +145,7 @@ class TestProfileRouter:
         )
 
         assert result["company_name"] == "Updated Company"
-        assert len(result["portfolio"]) == 1
+        assert len(result["portfolio"]) == 5
         mock_supabase_client.upsert.assert_called_once()
 
     @pytest.mark.asyncio
@@ -105,7 +155,38 @@ class TestProfileRouter:
             company_name="Test",
             company_description="Test",
             industries_served=["Tech"],
-            portfolio=[]
+            portfolio=[
+                {
+                    "name": "Project 1",
+                    "client_industry": "Technology",
+                    "description": "A test project",
+                    "key_outcomes": "Test results"
+                },
+                {
+                    "name": "Project 2",
+                    "client_industry": "Healthcare",
+                    "description": "Another test project",
+                    "key_outcomes": "More test results"
+                },
+                {
+                    "name": "Project 3",
+                    "client_industry": "Finance",
+                    "description": "Third test project",
+                    "key_outcomes": "Additional test results"
+                },
+                {
+                    "name": "Project 4",
+                    "client_industry": "Retail",
+                    "description": "Fourth test project",
+                    "key_outcomes": "Further test results"
+                },
+                {
+                    "name": "Project 5",
+                    "client_industry": "Manufacturing",
+                    "description": "Fifth test project",
+                    "key_outcomes": "Final test results"
+                }
+            ]
         )
 
         mock_supabase_client.execute.return_value = Mock(data=[])

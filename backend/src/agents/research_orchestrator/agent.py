@@ -1,18 +1,20 @@
 """Agent A - Research Orchestrator with tool-calling."""
 
-import os
 import json
-from typing import Dict, Any, List
+import os
+from typing import Any, Dict, List
+
 from pydantic_ai import Agent
 from requests import api
+
 from ...config import settings
-from ...utils.logger import info, error
+from ...utils.logger import error, info
 from ...utils.retry import run_agent_with_retry
-from .tools.web_search import web_search_tool
-from .tools.scrape_website import scrape_website_tool
 from .tools.get_company_linkedin import get_company_linkedin_tool
-from .tools.search_linkedin_profile import search_linkedin_profile_tool
 from .tools.scrape_linkedin_posts import scrape_linkedin_posts_tool
+from .tools.scrape_website import scrape_website_tool
+from .tools.search_linkedin_profile import search_linkedin_profile_tool
+from .tools.web_search import web_search_tool
 
 
 class ResearchOrchestrator:
@@ -79,7 +81,6 @@ class ResearchOrchestrator:
     ) -> Dict[str, Any]:
         """
         Orchestrate research for a company using intelligent tool-calling.
-
         Args:
             company_name: Name of the company to research
             meeting_objective: Objective of the sales meeting
@@ -100,7 +101,6 @@ class ResearchOrchestrator:
         }
 
         try:
-            # Run the agent with retry logic
             prompt = (
                 f"Research {company_name} for a sales meeting. "
                 f"Meeting objective: {meeting_objective}. "
@@ -152,12 +152,11 @@ class ResearchOrchestrator:
             research_limitations, overall_confidence, sources_used
         """
         # Get the result data - handle different pydantic_ai versions
-        if hasattr(result, 'data'):
+        if hasattr(result, "data"):
             result_data = result.data
-        elif hasattr(result, 'output'):
+        elif hasattr(result, "output"):
             result_data = result.output
         else:
-            # Fallback to str representation
             result_data = str(result)
 
         # Ensure result_data is a dictionary
@@ -170,12 +169,12 @@ class ResearchOrchestrator:
                 result_data = {
                     "company_intelligence": {
                         "name": company_name,
-                        "description": "Unable to parse research data"
+                        "description": "Unable to parse research data",
                     },
                     "decision_makers": [],
                     "research_limitations": ["Research data format invalid"],
                     "overall_confidence": 0.1,
-                    "sources_used": []
+                    "sources_used": [],
                 }
 
         # Ensure we return a dict with all required keys
@@ -183,12 +182,12 @@ class ResearchOrchestrator:
             result_data = {
                 "company_intelligence": {
                     "name": company_name,
-                    "description": "Invalid research data format"
+                    "description": "Invalid research data format",
                 },
                 "decision_makers": [],
                 "research_limitations": ["Research data is not a dictionary"],
                 "overall_confidence": 0.1,
-                "sources_used": []
+                "sources_used": [],
             }
 
         return result_data

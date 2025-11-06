@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { AuthProvider, useAuth } from './auth-provider';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -13,8 +13,9 @@ jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn(),
 }));
 
-// Mock fetch
+// Mock fetch and environment
 global.fetch = jest.fn();
+process.env.NEXT_PUBLIC_BACKEND_API_URL = 'http://localhost:8000';
 
 const mockPush = jest.fn();
 const mockSupabase = {
@@ -91,8 +92,10 @@ describe('AuthProvider', () => {
       </AuthProvider>
     );
 
-    // Trigger auth state change
-    authCallback('SIGNED_IN', mockSession);
+    // Wrap state updates in act()
+    act(() => {
+      authCallback('SIGNED_IN', mockSession);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('loading')).toHaveTextContent('not loading');
@@ -100,7 +103,7 @@ describe('AuthProvider', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('Test Company');
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/auth/profile', {
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/api/auth/profile', {
       headers: {
         Authorization: 'Bearer mock-token',
       },
@@ -132,7 +135,9 @@ describe('AuthProvider', () => {
       </AuthProvider>
     );
 
-    authCallback('SIGNED_IN', mockSession);
+    act(() => {
+      authCallback('SIGNED_IN', mockSession);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('loading')).toHaveTextContent('not loading');
@@ -155,7 +160,9 @@ describe('AuthProvider', () => {
       </AuthProvider>
     );
 
-    authCallback('SIGNED_OUT', null);
+    act(() => {
+      authCallback('SIGNED_OUT', null);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('loading')).toHaveTextContent('not loading');
@@ -187,7 +194,9 @@ describe('AuthProvider', () => {
       </AuthProvider>
     );
 
-    authCallback('SIGNED_IN', mockSession);
+    act(() => {
+      authCallback('SIGNED_IN', mockSession);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('loading')).toHaveTextContent('not loading');
