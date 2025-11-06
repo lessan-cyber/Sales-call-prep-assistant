@@ -39,10 +39,34 @@ def sample_user_profile() -> dict[str, Any]:
         "industries_served": ["Technology", "Healthcare", "Finance"],
         "portfolio": [
             {
-                "project_name": "AI Chatbot Implementation",
+                "name": "AI Chatbot Implementation",
+                "client_industry": "Technology",
                 "description": "Deployed enterprise chatbot solution",
-                "technologies": ["Python", "TensorFlow", "FastAPI"],
-                "results": "Reduced customer support costs by 40%"
+                "key_outcomes": "Reduced customer support costs by 40%"
+            },
+            {
+                "name": "Cloud Migration Project",
+                "client_industry": "Finance",
+                "description": "Migrated legacy systems to AWS cloud infrastructure",
+                "key_outcomes": "Reduced infrastructure costs by 35% and improved uptime to 99.9%"
+            },
+            {
+                "name": "Data Analytics Platform",
+                "client_industry": "Healthcare",
+                "description": "Built real-time analytics platform for patient data",
+                "key_outcomes": "Enabled data-driven decisions affecting 50,000+ patients"
+            },
+            {
+                "name": "E-commerce Modernization",
+                "client_industry": "Retail",
+                "description": "Redesigned online shopping experience with ML recommendations",
+                "key_outcomes": "Increased conversion rate by 28% and customer retention by 15%"
+            },
+            {
+                "name": "Cybersecurity Audit",
+                "client_industry": "Technology",
+                "description": "Comprehensive security assessment and remediation",
+                "key_outcomes": "Identified and fixed 47 critical vulnerabilities"
             }
         ]
     }
@@ -98,5 +122,5 @@ def mock_settings():
         mock.SERP_API_KEY = "test-serp-key"
         mock.FIRECRAWL_API_KEY = "test-firecrawl-key"
         mock.APIFY_API_KEY = "test-apify-key"
-        mock.GEMINI_MODEL = "gemini-2.0-flash-exp"
+        mock.GEMINI_MODEL = "google-gla:gemini-2.0-flash-exp"
         yield mock

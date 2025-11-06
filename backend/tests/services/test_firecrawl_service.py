@@ -92,7 +92,8 @@ class TestFirecrawlService:
         """Test structured data extraction with schema."""
         mock_response = Mock()
         mock_response.success = True
-        mock_response.data = {
+        mock_response.data = Mock()
+        mock_response.data.extracted = {
             "company_name": "Acme Corp",
             "industry": "Technology",
             "employees": "500-1000"
