@@ -13,6 +13,8 @@ export default function NewPrepPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [formData, setFormData] = useState({
     company_name: "",
@@ -25,18 +27,49 @@ export default function NewPrepPage() {
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const supabase = createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!session) {
+        if (!session) {
+          router.push("/login");
+          return;
+        }
+
+        setIsAuthenticated(true);
+      } catch (err: any) {
+        console.error("Authentication check failed:", err);
         router.push("/login");
+      } finally {
+        setIsLoading(false);
       }
     };
 
     checkAuth();
   }, [router]);
+
+  // Render loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-4 text-sm text-gray-600">Loading...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Don't render form if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

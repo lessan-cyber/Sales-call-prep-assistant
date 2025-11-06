@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { use } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
     Card,
@@ -90,10 +89,10 @@ function getConfidenceLabel(confidence: number): string {
 export default function PrepDetailPage({
     params,
 }: {
-    params: Promise<{ id: string }>;
+    params: { id: string };
 }) {
     const router = useRouter();
-    const { id } = use(params);
+    const { id } = params;
     const [prepData, setPrepData] = useState<PrepData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");

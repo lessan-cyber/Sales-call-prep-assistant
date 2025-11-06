@@ -112,7 +112,11 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                aria-describedby="password-hint"
               />
+              <p id="password-hint" className="text-xs text-muted-foreground">
+                Password must be at least 6 characters long
+              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirm-password">Confirm Password</Label>
@@ -124,7 +128,7 @@ export default function SignupPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading || password.length < 6}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing up...' : 'Sign Up'}
             </Button>
           </form>
