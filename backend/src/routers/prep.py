@@ -1,34 +1,23 @@
 """Router for sales prep generation using two-agent system."""
+
 import re
 from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from gotrue import User
+from supabase_auth.types import User
+
 from supabase import AsyncClient
 
+from ..agents import research_orchestrator, sales_brief_synthesizer
 from ..dependencies import get_current_user, get_supabase_client
 from ..schemas.prep_report import PrepRequest
 from ..services.cache_service import CacheService
 from ..services.supabase_service import SupabaseService, get_supabase_service
-from ..agents import research_orchestrator, sales_brief_synthesizer
-from ..utils.logger import info, error
-
+from ..utils.logger import error, info
+from ..utils.normalise import normalize_company_name
 
 router = APIRouter()
-
-
-def normalize_company_name(name: str) -> str:
-    """
-    Normalizes company name for consistent caching.
-
-    Args:
-        name: Original company name
-
-    Returns:
-        Normalized company name (lowercase, alphanumeric only)
-    """
-    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 
 @router.post("/preps", status_code=status.HTTP_200_OK)
@@ -39,13 +28,6 @@ async def create_prep(
 ):
     """
     Create a new sales prep report using the two-agent system.
-
-    Flow:
-    1. Check cache for fresh company data
-    2. Cache miss → Agent A researches with tool-calling
-    3. Agent B synthesizes: research + user profile → sales brief
-    4. Save to database
-
     Args:
         prep_request: Sales prep request with company and meeting details
         current_user: Authenticated user
@@ -80,7 +62,9 @@ async def create_prep(
         cache_hit = True
     else:
         # Cache miss or stale - run Agent A
-        info(f"Cache miss or stale for {normalized_company_name}. Running Agent A (Research Orchestrator).")
+        info(
+            f"Cache miss or stale for {normalized_company_name}. Running Agent A (Research Orchestrator)."
+        )
 
         try:
             # Agent A: Research Orchestrator
@@ -88,14 +72,14 @@ async def create_prep(
                 company_name=prep_request.company_name,
                 meeting_objective=prep_request.meeting_objective,
                 contact_person_name=prep_request.contact_person_name,
-                contact_linkedin_url=prep_request.contact_linkedin_url
+                contact_linkedin_url=prep_request.contact_linkedin_url,
             )
 
             if not research_result["success"]:
                 error(f"Agent A failed for {normalized_company_name}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Research failed: {research_result.get('error', 'Unknown error')}"
+                    detail=f"Research failed: {research_result.get('error', 'Unknown error')}",
                 )
 
             research_data = research_result["research_data"]
@@ -109,14 +93,14 @@ async def create_prep(
                     normalized_company_name=normalized_company_name,
                     company_data=research_data,
                     confidence_score=confidence_score,
-                    source_urls=source_urls
+                    source_urls=source_urls,
                 )
 
         except Exception as e:
             error(f"Error during research phase: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Research error: {str(e)}"
+                detail=f"Research error: {str(e)}",
             )
 
     # Step 2: Get user profile
@@ -127,7 +111,7 @@ async def create_prep(
         error(f"User profile not found for user {current_user.id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found. Please complete your profile before creating preps."
+            detail="User profile not found. Please complete your profile before creating preps.",
         )
 
     # Step 3: Agent B - Sales Brief Synthesizer
@@ -137,16 +121,18 @@ async def create_prep(
             research_data=research_data,
             user_profile=user_profile,
             user_id=str(current_user.id),
-            meeting_objective=prep_request.meeting_objective
+            meeting_objective=prep_request.meeting_objective,
         )
 
-        info(f"✓ Sales brief synthesized successfully with confidence: {prep_report.overall_confidence}")
+        info(
+            f"✓ Sales brief synthesized successfully with confidence: {prep_report.overall_confidence}"
+        )
 
     except Exception as e:
         error(f"Error during synthesis phase: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Synthesis error: {str(e)}"
+            detail=f"Synthesis error: {str(e)}",
         )
 
     # Step 4: Save to database
@@ -161,7 +147,7 @@ async def create_prep(
             contact_linkedin_url=prep_request.contact_linkedin_url,
             prep_data=prep_report.model_dump(),
             overall_confidence=prep_report.overall_confidence,
-            cache_hit=cache_hit
+            cache_hit=cache_hit,
         )
 
         if not prep_id:
@@ -173,14 +159,14 @@ async def create_prep(
             "message": "Prep report generated and saved successfully",
             "prep_id": prep_id,
             "report": prep_report.model_dump(),
-            "cache_hit": cache_hit
+            "cache_hit": cache_hit,
         }
 
     except Exception as e:
         error(f"Error saving prep to database: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error: {str(e)}"
+            detail=f"Database error: {str(e)}",
         )
 
 
@@ -214,7 +200,7 @@ async def get_prep_report(
     if not prep_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Prep report not found or not authorized."
+            detail="Prep report not found or not authorized.",
         )
 
     try:
@@ -232,5 +218,5 @@ async def get_prep_report(
         error(f"Error parsing prep_data from database: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error processing report data."
+            detail="Error processing report data.",
         )

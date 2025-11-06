@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = Field(..., alias="GOOGLE_API_KEY")
     SERP_API_KEY: str = Field(..., alias="SERP_API_KEY")
     FIRECRAWL_API_KEY: str = Field(..., alias="FIRECRAWL_API_KEY")
-    GEMINI_MODEL: str = Field(default="gemini-2.0-flash-exp", alias="GEMINI_MODEL")
+    GEMINI_MODEL: str = Field(default="google-gla:gemini-2.0-flash-exp", alias="GEMINI_MODEL")
     APIFY_API_KEY: str = Field(..., alias="APIFY_API_KEY")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

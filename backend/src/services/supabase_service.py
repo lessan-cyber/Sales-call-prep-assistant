@@ -1,7 +1,7 @@
 """Supabase service for database operations."""
 from typing import Optional, Dict, Any, List
 from supabase import AsyncClient
-from gotrue import User
+from supabase_auth.types import User
 from ..utils.logger import info, error
 
 

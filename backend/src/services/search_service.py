@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, List
 # from serpapi import GoogleSearch
 from ..config import settings
 from ..utils.logger import info, error
-from serpapi import search
+from serpapi.client import SerpAPI
 
 
 class SearchService:
@@ -13,7 +13,8 @@ class SearchService:
 
     def __init__(self):
         """Initialize the Search service."""
-        pass
+        # Create SerpAPI client with connection pooling
+        self.client = SerpAPI(api_key=settings.SERP_API_KEY)
 
     async def search(self, query: str, num_results: int = 10) -> Dict[str, Any]:
         """
@@ -32,13 +33,12 @@ class SearchService:
             params = {
                 "engine": "google",
                 "q": query,
-                "api_key": settings.SERP_API_KEY,
                 "num": num_results,
                 "hl": "en",
                 "gl": "us",
             }
 
-            research = search(params)
+            research = self.client.search(params)
             results = research
 
             # Extract organic results
