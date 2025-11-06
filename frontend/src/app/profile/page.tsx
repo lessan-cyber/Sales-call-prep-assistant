@@ -352,7 +352,6 @@ export default function ProfilePage() {
                         placeholder="e.g., AI Route Optimizer"
                         value={project.name}
                         onChange={(e) => handlePortfolioChange(index, "name", e.target.value)}
-                        required
                       />
                     </div>
                     <div className="grid w-full items-center gap-1.5">
@@ -363,7 +362,6 @@ export default function ProfilePage() {
                         placeholder="e.g., Logistics"
                         value={project.client_industry}
                         onChange={(e) => handlePortfolioChange(index, "client_industry", e.target.value)}
-                        required
                       />
                     </div>
                     <div className="grid w-full items-center gap-1.5">
@@ -374,7 +372,6 @@ export default function ProfilePage() {
                         value={project.description}
                         onChange={(e) => handlePortfolioChange(index, "description", e.target.value)}
                         maxLength={500}
-                        required
                       />
                     </div>
                     <div className="grid w-full items-center gap-1.5">
@@ -384,7 +381,6 @@ export default function ProfilePage() {
                         placeholder="What were the key results? (e.g., Improved delivery time by 15%)"
                         value={project.key_outcomes}
                         onChange={(e) => handlePortfolioChange(index, "key_outcomes", e.target.value)}
-                        required
                       />
                     </div>
                   </CardContent>

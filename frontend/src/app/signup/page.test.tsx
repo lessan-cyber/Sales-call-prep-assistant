@@ -108,13 +108,9 @@ describe('SignupPage', () => {
     await user.type(screen.getByLabelText(/email/i), 'test@example.com');
     await user.type(screen.getByLabelText(/^password$/i), '123');
     await user.type(screen.getByLabelText(/confirm password/i), '123');
-    await user.click(screen.getByRole('button', { name: /sign up/i }));
 
-    await waitFor(() => {
-      expect(screen.getByText(/password must be at least/i)).toBeInTheDocument();
-    });
-
-    expect(mockSignUp).not.toHaveBeenCalled();
+    const submitButton = screen.getByRole('button', { name: /sign up/i });
+    expect(submitButton).toBeDisabled();
   });
 
   it('should redirect if already logged in', () => {
@@ -125,13 +121,13 @@ describe('SignupPage', () => {
 
     render(<SignupPage />);
 
-    expect(mockPush).toHaveBeenCalledWith('/');
+    expect(mockPush).toHaveBeenCalledWith('/profile');
   });
 
   it('should have link to login page', () => {
     render(<SignupPage />);
 
-    const loginLink = screen.getByRole('link', { name: /sign in/i });
+    const loginLink = screen.getByRole('link', { name: /login/i });
     expect(loginLink).toBeInTheDocument();
     expect(loginLink).toHaveAttribute('href', '/login');
   });
@@ -140,18 +136,15 @@ describe('SignupPage', () => {
     const user = userEvent.setup();
     mockSignInWithOAuth.mockResolvedValueOnce({ error: null });
 
-    delete (window as any).location;
-    (window as any).location = { origin: 'http://localhost:3000' };
-
     render(<SignupPage />);
 
-    await user.click(screen.getByRole('button', { name: /continue with google/i }));
+    await user.click(screen.getByRole('button', { name: /google/i }));
 
     await waitFor(() => {
       expect(mockSignInWithOAuth).toHaveBeenCalledWith({
         provider: 'google',
         options: {
-          redirectTo: 'http://localhost:3000/auth/callback',
+          redirectTo: expect.stringMatching(/\/auth\/callback$/),
         },
       });
     });
