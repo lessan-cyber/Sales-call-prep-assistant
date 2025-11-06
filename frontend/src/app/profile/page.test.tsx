@@ -34,7 +34,7 @@ describe('ProfilePage', () => {
     });
     (createClient as jest.Mock).mockReturnValue({
       auth: {
-        getSession: jest.fn(),
+        getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
       },
     });
     // Reset fetch mock before each test

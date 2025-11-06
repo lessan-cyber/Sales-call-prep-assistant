@@ -37,11 +37,13 @@ describe('NewPrepPage', () => {
     (global.fetch as jest.Mock).mockClear();
   });
 
-  it('should render prep creation form', () => {
+  it('should render prep creation form', async () => {
     render(<NewPrepPage />);
 
-    // Wait for component to mount
-    expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    // Wait for auth check to complete and form to render
+    await waitFor(() => {
+      expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    });
     expect(screen.getByLabelText(/meeting objective/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/contact person name/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /generate prep report/i })).toBeInTheDocument();
@@ -58,8 +60,10 @@ describe('NewPrepPage', () => {
 
     render(<NewPrepPage />);
 
-    // Wait for component to mount
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    });
 
     await user.type(screen.getByLabelText(/company name/i), 'Acme Corp');
     await user.type(
@@ -94,8 +98,10 @@ describe('NewPrepPage', () => {
 
     render(<NewPrepPage />);
 
-    // Wait for component to mount
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    });
 
     await user.type(screen.getByLabelText(/company name/i), 'Acme Corp');
     await user.type(screen.getByLabelText(/meeting objective/i), 'Test objective');
@@ -113,8 +119,10 @@ describe('NewPrepPage', () => {
 
     render(<NewPrepPage />);
 
-    // Wait for component to mount
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    });
 
     const submitButton = screen.getByRole('button', { name: /generate prep report/i });
     await user.click(submitButton);
@@ -133,8 +141,10 @@ describe('NewPrepPage', () => {
 
     render(<NewPrepPage />);
 
-    // Wait for component to mount
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    });
 
     await user.type(screen.getByLabelText(/company name/i), 'Acme Corp');
     await user.type(screen.getByLabelText(/meeting objective/i), 'Test objective');
@@ -175,6 +185,11 @@ describe('NewPrepPage', () => {
 
     render(<NewPrepPage />);
 
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    });
+
     await user.type(screen.getByLabelText(/company name/i), 'Acme Corp');
     await user.type(screen.getByLabelText(/meeting objective/i), 'Test');
 
@@ -196,8 +211,10 @@ describe('NewPrepPage', () => {
 
     render(<NewPrepPage />);
 
-    // Wait for component to mount
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    });
 
     await user.type(screen.getByLabelText(/company name/i), 'Acme Corp');
     await user.type(screen.getByLabelText(/meeting objective/i), 'Test');
