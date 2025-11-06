@@ -405,7 +405,7 @@ See `.coderabbit.yaml` for complete configuration.
 
 ## Future Enhancements (Not Yet Implemented)
 
-According to the PRD (`docs/PRD2.md`):
+According to the PRD (`docs/PRD.md`):
 
 - LinkedIn scraping via Apify actors
 - Portfolio vector embeddings for similarity search
@@ -435,3 +435,4 @@ According to the PRD (`docs/PRD2.md`):
 - SerpAPI and Firecrawl have rate limits
 - Cache hits reduce API calls significantly
 - Monitor usage in `api_usage_logs` table
+- stop putting your name in the commit messages
