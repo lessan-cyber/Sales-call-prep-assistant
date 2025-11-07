@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import profile, prep
+from .routers import profile, prep, dashboard
 from .supabase_client import create_supabase
 from .services.supabase_service import init_supabase_service
 from .utils.logger import info, error
@@ -36,6 +36,7 @@ app.add_middleware(
 
 app.include_router(profile.router, prefix="/api/auth", tags=["Profile"])
 app.include_router(prep.router, prefix="/api", tags=["Prep"])
+app.include_router(dashboard.router, prefix="/api", tags=["Dashboard"])
 
 
 @app.get("/")

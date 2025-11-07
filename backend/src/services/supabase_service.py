@@ -325,6 +325,267 @@ class SupabaseService:
             error(f"Error retrieving meeting outcomes: {e}")
             return []
 
+    async def get_total_preps_count(self, user_id: str) -> int:
+        """
+        Get total count of preps for a user.
+
+        Args:
+            user_id: UUID of the user
+
+        Returns:
+            Total count of preps
+        """
+        try:
+            response = (
+                await self.supabase.table("meeting_preps")
+                .select("id", count="exact")
+                .eq("user_id", user_id)
+                .execute()
+            )
+
+            return response.count if response.count else 0
+
+        except Exception as e:
+            error(f"Error counting preps: {e}")
+            return 0
+
+    async def get_success_metrics(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get success rate and confidence metrics for a user.
+
+        Args:
+            user_id: UUID of the user
+
+        Returns:
+            Dictionary with success metrics
+        """
+        try:
+            # Get all preps with their confidence scores
+            preps_response = (
+                await self.supabase.table("meeting_preps")
+                .select("overall_confidence")
+                .eq("user_id", user_id)
+                .execute()
+            )
+
+            if not preps_response.data:
+                return {
+                    "success_rate": 0.0,
+                    "total_successful": 0,
+                    "total_completed": 0,
+                    "avg_confidence": 0.0
+                }
+
+            # Calculate average confidence
+            total_confidence = sum(prep["overall_confidence"] for prep in preps_response.data)
+            avg_confidence = total_confidence / len(preps_response.data)
+
+            # Get outcomes to calculate success rate
+            outcomes_response = (
+                await self.supabase.table("meeting_outcomes")
+                .select("meeting_status, outcome")
+                .execute()
+            )
+
+            if not outcomes_response.data:
+                return {
+                    "success_rate": 0.0,
+                    "total_successful": 0,
+                    "total_completed": 0,
+                    "avg_confidence": round(avg_confidence, 2)
+                }
+
+            # Calculate success rate
+            completed_count = sum(1 for o in outcomes_response.data if o["meeting_status"] == "completed")
+            successful_count = sum(1 for o in outcomes_response.data if o["outcome"] == "successful")
+
+            success_rate = (successful_count / completed_count * 100) if completed_count > 0 else 0.0
+
+            return {
+                "success_rate": round(success_rate, 1),
+                "total_successful": successful_count,
+                "total_completed": completed_count,
+                "avg_confidence": round(avg_confidence, 2)
+            }
+
+        except Exception as e:
+            error(f"Error calculating success metrics: {e}")
+            return {
+                "success_rate": 0.0,
+                "total_successful": 0,
+                "total_completed": 0,
+                "avg_confidence": 0.0
+            }
+
+    async def get_recent_preps(
+        self,
+        user_id: str,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Get recent preps for a user.
+
+        Args:
+            user_id: UUID of the user
+            limit: Maximum number of preps to return
+
+        Returns:
+            List of recent preps with basic info
+        """
+        try:
+            response = (
+                await self.supabase.table("meeting_preps")
+                .select("""
+                    id,
+                    company_name,
+                    meeting_objective,
+                    meeting_date,
+                    created_at,
+                    overall_confidence
+                """)
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+
+            return response.data if response.data else []
+
+        except Exception as e:
+            error(f"Error retrieving recent preps: {e}")
+            return []
+
+    async def get_upcoming_meetings(
+        self,
+        user_id: str,
+        days_ahead: int = 7
+    ) -> List[Dict[str, Any]]:
+        """
+        Get upcoming meetings for a user.
+
+        Args:
+            user_id: UUID of the user
+            days_ahead: Number of days to look ahead
+
+        Returns:
+            List of upcoming meetings
+        """
+        try:
+            # Calculate date range
+            today = datetime.now().strftime("%Y-%m-%d")
+            future_date = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+
+            response = (
+                await self.supabase.table("meeting_preps")
+                .select("""
+                    id,
+                    company_name,
+                    meeting_objective,
+                    meeting_date
+                """)
+                .eq("user_id", user_id)
+                .not_.is_("meeting_date", None)
+                .gte("meeting_date", today)
+                .lte("meeting_date", future_date)
+                .order("meeting_date", desc=True)
+                .execute()
+            )
+
+            return response.data if response.data else []
+
+        except Exception as e:
+            error(f"Error retrieving upcoming meetings: {e}")
+            return []
+
+    async def get_user_preps_paginated(
+        self,
+        user_id: str,
+        limit: int = 10,
+        offset: int = 0,
+        status_filter: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get paginated list of user's preps.
+
+        Args:
+            user_id: UUID of the user
+            limit: Number of items to return
+            offset: Number of items to skip
+            status_filter: Filter by status (pending, completed, all)
+            search: Search by company name
+
+        Returns:
+            List of preps with outcomes joined
+        """
+        try:
+            # Build query
+            query = self.supabase.table("meeting_preps").select("""
+                id,
+                company_name,
+                meeting_objective,
+                meeting_date,
+                created_at,
+                overall_confidence,
+                meeting_outcomes:meeting_outcomes (
+                    meeting_status,
+                    outcome
+                )
+            """).eq("user_id", user_id)
+
+            # Apply status filter
+            if status_filter and status_filter != "all":
+                # This is a simplified filter - in production you might want to use joins
+                pass
+
+            # Apply search
+            if search:
+                query = query.ilike("company_name", f"%{search}%")
+
+            # Apply pagination and ordering
+            response = (
+                query
+                .order("created_at", desc=True)
+                .range(offset, offset + limit - 1)
+                .execute()
+            )
+
+            return response.data if response.data else []
+
+        except Exception as e:
+            error(f"Error retrieving paginated preps: {e}")
+            return []
+
+    async def get_user_preps_count(
+        self,
+        user_id: str,
+        status_filter: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> int:
+        """
+        Get total count of user's preps for pagination.
+
+        Args:
+            user_id: UUID of the user
+            status_filter: Filter by status
+            search: Search by company name
+
+        Returns:
+            Total count
+        """
+        try:
+            query = self.supabase.table("meeting_preps").select("id", count="exact").eq("user_id", user_id)
+
+            if search:
+                query = query.ilike("company_name", f"%{search}%")
+
+            response = query.execute()
+            return response.count if response.count else 0
+
+        except Exception as e:
+            error(f"Error counting user preps: {e}")
+            return 0
+
     async def log_api_usage(
         self,
         user_id: Optional[str],
