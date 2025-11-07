@@ -12,6 +12,7 @@ from supabase import AsyncClient
 from ..agents import research_orchestrator, sales_brief_synthesizer
 from ..dependencies import get_current_user, get_supabase_client
 from ..schemas.prep_report import PrepRequest
+from ..schemas.meeting_outcome import MeetingOutcomeCreate
 from ..services.cache_service import CacheService
 from ..services.supabase_service import SupabaseService, get_supabase_service
 from ..utils.logger import error, info
@@ -225,7 +226,7 @@ async def get_prep_report(
 @router.post("/preps/{prep_id}/outcome", status_code=status.HTTP_201_CREATED)
 async def record_meeting_outcome(
     prep_id: str,
-    outcome_data: dict,
+    outcome_data: MeetingOutcomeCreate,
     current_user: User = Depends(get_current_user),
     supabase: AsyncClient = Depends(get_supabase_client),
 ):
@@ -234,14 +235,13 @@ async def record_meeting_outcome(
 
     Args:
         prep_id: UUID of the prep
-        outcome_data: Meeting outcome data
+        outcome_data: Meeting outcome data (validated by Pydantic)
         current_user: Authenticated user
         supabase: Supabase client
 
     Returns:
         Success message with outcome ID
     """
-    from ..schemas.meeting_outcome import MeetingOutcomeCreate
     from ..services.supabase_service import get_supabase_service
 
     info(
@@ -259,20 +259,10 @@ async def record_meeting_outcome(
             detail="Prep not found or not authorized.",
         )
 
-    # Validate the outcome data
-    try:
-        validated_outcome = MeetingOutcomeCreate(**outcome_data)
-    except Exception as e:
-        error(f"Invalid outcome data: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid outcome data: {str(e)}",
-        )
-
-    # Save the outcome
+    # Save the outcome (outcome_data is already validated by FastAPI)
     outcome_id = await supabase_service.save_meeting_outcome(
         prep_id=prep_id,
-        outcome_data=validated_outcome.model_dump(exclude_unset=True)
+        outcome_data=outcome_data.model_dump(exclude_unset=True)
     )
 
     if not outcome_id:

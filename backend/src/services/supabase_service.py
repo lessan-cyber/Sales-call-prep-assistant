@@ -1,8 +1,24 @@
 """Supabase service for database operations."""
-from typing import Optional, Dict, Any, List
-from supabase import AsyncClient
+
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
 from supabase_auth.types import User
-from ..utils.logger import info, error
+
+from supabase import AsyncClient
+
+from ..utils.logger import error, info
+
+# Import specific exceptions for better error handling
+try:
+    from postgrest.exceptions import PostgrestError
+except ImportError:
+    PostgrestError = Exception
+
+try:
+    from supabase import APIError
+except ImportError:
+    APIError = Exception
 
 
 class SupabaseService:
@@ -25,7 +41,9 @@ class SupabaseService:
         try:
             response = (
                 await self.supabase.table("user_profiles")
-                .select("company_name, company_description, industries_served, portfolio")
+                .select(
+                    "company_name, company_description, industries_served, portfolio"
+                )
                 .eq("id", user_id)
                 .execute()
             )
@@ -34,8 +52,14 @@ class SupabaseService:
                 return response.data[0]
             return None
 
+        except PostgrestError as e:
+            error(f"Database error retrieving user profile: {e}")
+            return None
+        except APIError as e:
+            error(f"API error retrieving user profile: {e}")
+            return None
         except Exception as e:
-            error(f"Error retrieving user profile: {e}")
+            error(f"Unexpected error retrieving user profile: {e}")
             return None
 
     async def save_meeting_prep(
@@ -49,7 +73,7 @@ class SupabaseService:
         contact_linkedin_url: Optional[str],
         prep_data: Dict[str, Any],
         overall_confidence: float,
-        cache_hit: bool
+        cache_hit: bool,
     ) -> Optional[str]:
         """
         Save a meeting prep to the database.
@@ -80,10 +104,12 @@ class SupabaseService:
                 "contact_linkedin_url": contact_linkedin_url,
                 "prep_data": prep_data,
                 "overall_confidence": max(0.0, min(1.0, overall_confidence)),
-                "cache_hit": cache_hit
+                "cache_hit": cache_hit,
             }
 
-            response = await self.supabase.table("meeting_preps").insert(prep_record).execute()
+            response = (
+                await self.supabase.table("meeting_preps").insert(prep_record).execute()
+            )
 
             if response.data:
                 prep_id = response.data[0]["id"]
@@ -92,11 +118,19 @@ class SupabaseService:
 
             return None
 
+        except PostgrestError as e:
+            error(f"Database error saving meeting prep: {e}")
+            return None
+        except APIError as e:
+            error(f"API error saving meeting prep: {e}")
+            return None
         except Exception as e:
-            error(f"Error saving meeting prep: {e}")
+            error(f"Unexpected error saving meeting prep: {e}")
             return None
 
-    async def get_meeting_prep(self, prep_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get_meeting_prep(
+        self, prep_id: str, user_id: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Retrieve a meeting prep by ID.
 
@@ -121,15 +155,18 @@ class SupabaseService:
                 return response.data[0]
             return None
 
+        except PostgrestError as e:
+            error(f"Database error retrieving meeting prep: {e}")
+            return None
+        except APIError as e:
+            error(f"API error retrieving meeting prep: {e}")
+            return None
         except Exception as e:
-            error(f"Error retrieving meeting prep: {e}")
+            error(f"Unexpected error retrieving meeting prep: {e}")
             return None
 
     async def search_portfolio_projects(
-        self,
-        user_id: str,
-        search_query: str,
-        limit: int = 5
+        self, user_id: str, search_query: str, limit: int = 5
     ) -> List[Dict[str, Any]]:
         """
         Search through user's portfolio projects for relevance.
@@ -162,19 +199,27 @@ class SupabaseService:
             for i, project in enumerate(portfolio):
                 relevance_score = self._calculate_relevance(search_query, project)
                 if relevance_score > 0.3:  # Threshold for relevance
-                    matches.append({
-                        "index": i,
-                        "project": project,
-                        "relevance_score": relevance_score
-                    })
+                    matches.append(
+                        {
+                            "index": i,
+                            "project": project,
+                            "relevance_score": relevance_score,
+                        }
+                    )
 
             # Sort by relevance score
             matches.sort(key=lambda x: x["relevance_score"], reverse=True)
 
             return matches[:limit]
 
+        except PostgrestError as e:
+            error(f"Database error searching portfolio: {e}")
+            return []
+        except APIError as e:
+            error(f"API error searching portfolio: {e}")
+            return []
         except Exception as e:
-            error(f"Error searching portfolio: {e}")
+            error(f"Unexpected error searching portfolio: {e}")
             return []
 
     def _calculate_relevance(self, query: str, project: Dict[str, Any]) -> float:
@@ -190,12 +235,14 @@ class SupabaseService:
             Relevance score (0.0 to 1.0)
         """
         # Combine project fields for comparison
-        project_text = " ".join([
-            str(project.get("name", "")),
-            str(project.get("client_industry", "")),
-            str(project.get("description", "")),
-            str(project.get("key_outcomes", ""))
-        ]).lower()
+        project_text = " ".join(
+            [
+                str(project.get("name", "")),
+                str(project.get("client_industry", "")),
+                str(project.get("description", "")),
+                str(project.get("key_outcomes", "")),
+            ]
+        ).lower()
 
         query_terms = query.lower().split()
         matches = sum(1 for term in query_terms if term in project_text)
@@ -204,9 +251,7 @@ class SupabaseService:
         return matches / len(query_terms) if query_terms else 0.0
 
     async def save_meeting_outcome(
-        self,
-        prep_id: str,
-        outcome_data: Dict[str, Any]
+        self, prep_id: str, outcome_data: Dict[str, Any]
     ) -> Optional[str]:
         """
         Save or update a meeting outcome.
@@ -229,23 +274,22 @@ class SupabaseService:
 
             if existing_response.data:
                 # Update existing outcome
+                # (updated_at will be set automatically by database trigger)
                 response = (
                     await self.supabase.table("meeting_outcomes")
-                    .update({
-                        **outcome_data,
-                        "updated_at": "NOW()"
-                    })
+                    .update(outcome_data)
                     .eq("prep_id", prep_id)
                     .execute()
                 )
                 info(f"Updated meeting outcome for prep {prep_id}")
             else:
                 # Create new outcome
-                outcome_record = {
-                    "prep_id": prep_id,
-                    **outcome_data
-                }
-                response = await self.supabase.table("meeting_outcomes").insert(outcome_record).execute()
+                outcome_record = {"prep_id": prep_id, **outcome_data}
+                response = (
+                    await self.supabase.table("meeting_outcomes")
+                    .insert(outcome_record)
+                    .execute()
+                )
                 info(f"Created meeting outcome for prep {prep_id}")
 
             if response.data:
@@ -253,8 +297,14 @@ class SupabaseService:
 
             return None
 
+        except PostgrestError as e:
+            error(f"Database error saving meeting outcome: {e}")
+            return None
+        except APIError as e:
+            error(f"API error saving meeting outcome: {e}")
+            return None
         except Exception as e:
-            error(f"Error saving meeting outcome: {e}")
+            error(f"Unexpected error saving meeting outcome: {e}")
             return None
 
     async def get_meeting_outcome(self, prep_id: str) -> Optional[Dict[str, Any]]:
@@ -280,14 +330,18 @@ class SupabaseService:
                 return response.data[0]
             return None
 
+        except PostgrestError as e:
+            error(f"Database error retrieving meeting outcome: {e}")
+            return None
+        except APIError as e:
+            error(f"API error retrieving meeting outcome: {e}")
+            return None
         except Exception as e:
-            error(f"Error retrieving meeting outcome: {e}")
+            error(f"Unexpected error retrieving meeting outcome: {e}")
             return None
 
     async def get_user_meeting_outcomes(
-        self,
-        user_id: str,
-        limit: int = 50
+        self, user_id: str, limit: int = 50
     ) -> List[Dict[str, Any]]:
         """
         Get all meeting outcomes for a user.
@@ -321,8 +375,14 @@ class SupabaseService:
 
             return response.data if response.data else []
 
+        except PostgrestError as e:
+            error(f"Database error retrieving meeting outcomes: {e}")
+            return []
+        except APIError as e:
+            error(f"API error retrieving meeting outcomes: {e}")
+            return []
         except Exception as e:
-            error(f"Error retrieving meeting outcomes: {e}")
+            error(f"Unexpected error retrieving meeting outcomes: {e}")
             return []
 
     async def get_total_preps_count(self, user_id: str) -> int:
@@ -345,8 +405,14 @@ class SupabaseService:
 
             return response.count if response.count else 0
 
+        except PostgrestError as e:
+            error(f"Database error counting preps: {e}")
+            return 0
+        except APIError as e:
+            error(f"API error counting preps: {e}")
+            return 0
         except Exception as e:
-            error(f"Error counting preps: {e}")
+            error(f"Unexpected error counting preps: {e}")
             return 0
 
     async def get_success_metrics(self, user_id: str) -> Dict[str, Any]:
@@ -373,17 +439,20 @@ class SupabaseService:
                     "success_rate": 0.0,
                     "total_successful": 0,
                     "total_completed": 0,
-                    "avg_confidence": 0.0
+                    "avg_confidence": 0.0,
                 }
 
             # Calculate average confidence
-            total_confidence = sum(prep["overall_confidence"] for prep in preps_response.data)
+            total_confidence = sum(
+                prep["overall_confidence"] for prep in preps_response.data
+            )
             avg_confidence = total_confidence / len(preps_response.data)
 
             # Get outcomes to calculate success rate
             outcomes_response = (
                 await self.supabase.table("meeting_outcomes")
-                .select("meeting_status, outcome")
+                .select("meeting_status, outcome, meeting_preps!inner(user_id)")
+                .eq("meeting_preps.user_id", user_id)
                 .execute()
             )
 
@@ -392,35 +461,57 @@ class SupabaseService:
                     "success_rate": 0.0,
                     "total_successful": 0,
                     "total_completed": 0,
-                    "avg_confidence": round(avg_confidence, 2)
+                    "avg_confidence": round(avg_confidence, 2),
                 }
 
             # Calculate success rate
-            completed_count = sum(1 for o in outcomes_response.data if o["meeting_status"] == "completed")
-            successful_count = sum(1 for o in outcomes_response.data if o["outcome"] == "successful")
+            completed_count = sum(
+                1 for o in outcomes_response.data if o["meeting_status"] == "completed"
+            )
+            successful_count = sum(
+                1 for o in outcomes_response.data if o["outcome"] == "successful"
+            )
 
-            success_rate = (successful_count / completed_count * 100) if completed_count > 0 else 0.0
+            success_rate = (
+                (successful_count / completed_count * 100)
+                if completed_count > 0
+                else 0.0
+            )
 
             return {
                 "success_rate": round(success_rate, 1),
                 "total_successful": successful_count,
                 "total_completed": completed_count,
-                "avg_confidence": round(avg_confidence, 2)
+                "avg_confidence": round(avg_confidence, 2),
             }
 
-        except Exception as e:
-            error(f"Error calculating success metrics: {e}")
+        except PostgrestError as e:
+            error(f"Database error calculating success metrics: {e}")
             return {
                 "success_rate": 0.0,
                 "total_successful": 0,
                 "total_completed": 0,
-                "avg_confidence": 0.0
+                "avg_confidence": 0.0,
+            }
+        except APIError as e:
+            error(f"API error calculating success metrics: {e}")
+            return {
+                "success_rate": 0.0,
+                "total_successful": 0,
+                "total_completed": 0,
+                "avg_confidence": 0.0,
+            }
+        except Exception as e:
+            error(f"Unexpected error calculating success metrics: {e}")
+            return {
+                "success_rate": 0.0,
+                "total_successful": 0,
+                "total_completed": 0,
+                "avg_confidence": 0.0,
             }
 
     async def get_recent_preps(
-        self,
-        user_id: str,
-        limit: int = 10
+        self, user_id: str, limit: int = 10
     ) -> List[Dict[str, Any]]:
         """
         Get recent preps for a user.
@@ -430,7 +521,7 @@ class SupabaseService:
             limit: Maximum number of preps to return
 
         Returns:
-            List of recent preps with basic info
+            List of recent preps with basic info including outcome_status
         """
         try:
             response = (
@@ -441,7 +532,8 @@ class SupabaseService:
                     meeting_objective,
                     meeting_date,
                     created_at,
-                    overall_confidence
+                    overall_confidence,
+                    meeting_outcomes!left(meeting_status)
                 """)
                 .eq("user_id", user_id)
                 .order("created_at", desc=True)
@@ -449,16 +541,31 @@ class SupabaseService:
                 .execute()
             )
 
-            return response.data if response.data else []
+            # Process the data to flatten outcome_status
+            preps_data = response.data if response.data else []
+            for prep in preps_data:
+                # Extract meeting_status from meeting_outcomes array (or null if no outcome)
+                if prep.get("meeting_outcomes") and len(prep["meeting_outcomes"]) > 0:
+                    prep["outcome_status"] = prep["meeting_outcomes"][0]["meeting_status"]
+                else:
+                    prep["outcome_status"] = None
+                # Remove the nested meeting_outcomes field
+                prep.pop("meeting_outcomes", None)
 
+            return preps_data
+
+        except PostgrestError as e:
+            error(f"Database error retrieving recent preps: {e}")
+            return []
+        except APIError as e:
+            error(f"API error retrieving recent preps: {e}")
+            return []
         except Exception as e:
-            error(f"Error retrieving recent preps: {e}")
+            error(f"Unexpected error retrieving recent preps: {e}")
             return []
 
     async def get_upcoming_meetings(
-        self,
-        user_id: str,
-        days_ahead: int = 7
+        self, user_id: str, days_ahead: int = 7
     ) -> List[Dict[str, Any]]:
         """
         Get upcoming meetings for a user.
@@ -473,7 +580,9 @@ class SupabaseService:
         try:
             # Calculate date range
             today = datetime.now().strftime("%Y-%m-%d")
-            future_date = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+            future_date = (datetime.now() + timedelta(days=days_ahead)).strftime(
+                "%Y-%m-%d"
+            )
 
             response = (
                 await self.supabase.table("meeting_preps")
@@ -487,14 +596,20 @@ class SupabaseService:
                 .not_.is_("meeting_date", None)
                 .gte("meeting_date", today)
                 .lte("meeting_date", future_date)
-                .order("meeting_date", desc=True)
+                .order("meeting_date", desc=False)
                 .execute()
             )
 
             return response.data if response.data else []
 
+        except PostgrestError as e:
+            error(f"Database error retrieving upcoming meetings: {e}")
+            return []
+        except APIError as e:
+            error(f"API error retrieving upcoming meetings: {e}")
+            return []
         except Exception as e:
-            error(f"Error retrieving upcoming meetings: {e}")
+            error(f"Unexpected error retrieving upcoming meetings: {e}")
             return []
 
     async def get_user_preps_paginated(
@@ -503,7 +618,7 @@ class SupabaseService:
         limit: int = 10,
         offset: int = 0,
         status_filter: Optional[str] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Get paginated list of user's preps.
@@ -512,7 +627,7 @@ class SupabaseService:
             user_id: UUID of the user
             limit: Number of items to return
             offset: Number of items to skip
-            status_filter: Filter by status (pending, completed, all)
+            status_filter: Filter by status (pending, completed, cancelled, rescheduled, all)
             search: Search by company name
 
         Returns:
@@ -520,7 +635,9 @@ class SupabaseService:
         """
         try:
             # Build query
-            query = self.supabase.table("meeting_preps").select("""
+            query = (
+                self.supabase.table("meeting_preps")
+                .select("""
                 id,
                 company_name,
                 meeting_objective,
@@ -531,12 +648,93 @@ class SupabaseService:
                     meeting_status,
                     outcome
                 )
-            """).eq("user_id", user_id)
+            """)
+                .eq("user_id", user_id)
+            )
 
             # Apply status filter
             if status_filter and status_filter != "all":
-                # This is a simplified filter - in production you might want to use joins
-                pass
+                # Validate and split status values (support comma-separated)
+                valid_statuses = {"pending", "completed", "cancelled", "rescheduled"}
+                status_values = [s.strip() for s in status_filter.split(",")]
+
+                # Validate all status values
+                for status in status_values:
+                    if status not in valid_statuses:
+                        raise ValueError(
+                            f"Invalid status filter: '{status}'. Valid values are: {', '.join(valid_statuses)}"
+                        )
+
+                # Get prep IDs based on status filter
+                prep_ids = []
+
+                # Handle 'pending' - preps without outcomes
+                if "pending" in status_values:
+                    # Get all prep IDs for the user
+                    user_preps_response = (
+                        await self.supabase.table("meeting_preps")
+                        .select("id")
+                        .eq("user_id", user_id)
+                        .execute()
+                    )
+                    all_prep_ids = (
+                        [p["id"] for p in user_preps_response.data]
+                        if user_preps_response.data
+                        else []
+                    )
+
+                    # Get prep IDs that have outcomes
+                    outcome_response = (
+                        await self.supabase.table("meeting_outcomes")
+                        .select("prep_id")
+                        .in_("prep_id", all_prep_ids)
+                        .execute()
+                    )
+                    prep_ids_with_outcomes = (
+                        [o["prep_id"] for o in outcome_response.data]
+                        if outcome_response.data
+                        else []
+                    )
+
+                    # Pending = all preps minus preps with outcomes
+                    prep_ids = [
+                        pid for pid in all_prep_ids if pid not in prep_ids_with_outcomes
+                    ]
+
+                    # If there are other statuses mixed with pending, we'll get those separately
+                    other_statuses = [s for s in status_values if s != "pending"]
+                    if other_statuses:
+                        outcomes_response = (
+                            await self.supabase.table("meeting_outcomes")
+                            .select("prep_id")
+                            .in_("meeting_status", other_statuses)
+                            .execute()
+                        )
+                        prep_ids.extend(
+                            [o["prep_id"] for o in outcomes_response.data]
+                            if outcomes_response.data
+                            else []
+                        )
+                else:
+                    # No 'pending' - just filter by meeting_status
+                    outcomes_response = (
+                        await self.supabase.table("meeting_outcomes")
+                        .select("prep_id")
+                        .in_("meeting_status", status_values)
+                        .execute()
+                    )
+                    prep_ids = (
+                        [o["prep_id"] for o in outcomes_response.data]
+                        if outcomes_response.data
+                        else []
+                    )
+
+                # Apply the filter to the query
+                if prep_ids:
+                    query = query.in_("id", prep_ids)
+                else:
+                    # If no matching preps, return empty result
+                    return []
 
             # Apply search
             if search:
@@ -544,37 +742,135 @@ class SupabaseService:
 
             # Apply pagination and ordering
             response = (
-                query
-                .order("created_at", desc=True)
+                query.order("created_at", desc=True)
                 .range(offset, offset + limit - 1)
                 .execute()
             )
 
             return response.data if response.data else []
 
+        except PostgrestError as e:
+            error(f"Database error retrieving paginated preps: {e}")
+            return []
+        except APIError as e:
+            error(f"API error retrieving paginated preps: {e}")
+            return []
         except Exception as e:
-            error(f"Error retrieving paginated preps: {e}")
+            error(f"Unexpected error retrieving paginated preps: {e}")
             return []
 
     async def get_user_preps_count(
         self,
         user_id: str,
         status_filter: Optional[str] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
     ) -> int:
         """
         Get total count of user's preps for pagination.
 
         Args:
             user_id: UUID of the user
-            status_filter: Filter by status
+            status_filter: Filter by status (pending, completed, cancelled, rescheduled, all)
             search: Search by company name
 
         Returns:
             Total count
         """
         try:
-            query = self.supabase.table("meeting_preps").select("id", count="exact").eq("user_id", user_id)
+            # If status_filter is provided and not "all", we need to apply the filter
+            # For count, we can't use joins easily, so we'll get matching prep IDs first
+            prep_ids = None
+
+            if status_filter and status_filter != "all":
+                # Validate and split status values (support comma-separated)
+                valid_statuses = {"pending", "completed", "cancelled", "rescheduled"}
+                status_values = [s.strip() for s in status_filter.split(",")]
+
+                # Validate all status values
+                for status in status_values:
+                    if status not in valid_statuses:
+                        raise ValueError(
+                            f"Invalid status filter: '{status}'. Valid values are: {', '.join(valid_statuses)}"
+                        )
+
+                # Get prep IDs based on status filter
+                prep_ids = []
+
+                # Handle 'pending' - preps without outcomes
+                if "pending" in status_values:
+                    # Get all prep IDs for the user
+                    user_preps_response = (
+                        await self.supabase.table("meeting_preps")
+                        .select("id")
+                        .eq("user_id", user_id)
+                        .execute()
+                    )
+                    all_prep_ids = (
+                        [p["id"] for p in user_preps_response.data]
+                        if user_preps_response.data
+                        else []
+                    )
+
+                    # Get prep IDs that have outcomes
+                    outcome_response = (
+                        await self.supabase.table("meeting_outcomes")
+                        .select("prep_id")
+                        .in_("prep_id", all_prep_ids)
+                        .execute()
+                    )
+                    prep_ids_with_outcomes = (
+                        [o["prep_id"] for o in outcome_response.data]
+                        if outcome_response.data
+                        else []
+                    )
+
+                    # Pending = all preps minus preps with outcomes
+                    prep_ids = [
+                        pid for pid in all_prep_ids if pid not in prep_ids_with_outcomes
+                    ]
+
+                    # If there are other statuses mixed with pending, we'll get those separately
+                    other_statuses = [s for s in status_values if s != "pending"]
+                    if other_statuses:
+                        outcomes_response = (
+                            await self.supabase.table("meeting_outcomes")
+                            .select("prep_id")
+                            .in_("meeting_status", other_statuses)
+                            .execute()
+                        )
+                        prep_ids.extend(
+                            [o["prep_id"] for o in outcomes_response.data]
+                            if outcomes_response.data
+                            else []
+                        )
+                else:
+                    # No 'pending' - just filter by meeting_status
+                    outcomes_response = (
+                        await self.supabase.table("meeting_outcomes")
+                        .select("prep_id")
+                        .in_("meeting_status", status_values)
+                        .execute()
+                    )
+                    prep_ids = (
+                        [o["prep_id"] for o in outcomes_response.data]
+                        if outcomes_response.data
+                        else []
+                    )
+
+            # Build the query
+            query = (
+                self.supabase.table("meeting_preps")
+                .select("id", count="exact")
+                .eq("user_id", user_id)
+            )
+
+            # Apply the status filter
+            if prep_ids is not None:
+                if prep_ids:
+                    query = query.in_("id", prep_ids)
+                else:
+                    # If no matching preps, return 0
+                    return 0
 
             if search:
                 query = query.ilike("company_name", f"%{search}%")
@@ -582,8 +878,14 @@ class SupabaseService:
             response = query.execute()
             return response.count if response.count else 0
 
+        except PostgrestError as e:
+            error(f"Database error counting user preps: {e}")
+            return 0
+        except APIError as e:
+            error(f"API error counting user preps: {e}")
+            return 0
         except Exception as e:
-            error(f"Error counting user preps: {e}")
+            error(f"Unexpected error counting user preps: {e}")
             return 0
 
     async def log_api_usage(
@@ -596,7 +898,7 @@ class SupabaseService:
         cost_usd: Optional[float],
         duration_ms: int,
         success: bool,
-        error_message: Optional[str]
+        error_message: Optional[str],
     ) -> bool:
         """
         Log API usage for monitoring.
@@ -625,14 +927,20 @@ class SupabaseService:
                 "cost_usd": cost_usd,
                 "duration_ms": duration_ms,
                 "success": success,
-                "error_message": error_message
+                "error_message": error_message,
             }
 
             await self.supabase.table("api_usage_logs").insert(log_entry).execute()
             return True
 
+        except PostgrestError as e:
+            error(f"Database error logging API usage: {e}")
+            return False
+        except APIError as e:
+            error(f"API error logging API usage: {e}")
+            return False
         except Exception as e:
-            error(f"Error logging API usage: {e}")
+            error(f"Unexpected error logging API usage: {e}")
             return False
 
 
@@ -651,7 +959,9 @@ def get_supabase_service() -> SupabaseService:
         RuntimeError: If service not initialized
     """
     if supabase_service is None:
-        raise RuntimeError("SupabaseService not initialized. Call init_supabase_service() first.")
+        raise RuntimeError(
+            "SupabaseService not initialized. Call init_supabase_service() first."
+        )
     return supabase_service
 
 
