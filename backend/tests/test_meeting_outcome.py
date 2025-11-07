@@ -1,6 +1,7 @@
 """Tests for meeting outcome API."""
 
 import pytest
+from pydantic import ValidationError
 from unittest.mock import AsyncMock, Mock, patch
 from backend.src.schemas.meeting_outcome import MeetingOutcomeCreate, MeetingStatus, MeetingOutcomeValue
 from backend.src.services.supabase_service import SupabaseService
@@ -39,14 +40,14 @@ class TestMeetingOutcomeSchema:
     def test_outcome_validation_failures(self):
         """Test validation failures."""
         # Test invalid prep_accuracy (too high)
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             MeetingOutcomeCreate(
                 meeting_status="completed",
                 prep_accuracy=10  # Should be 1-5
             )
 
         # Test invalid meeting_status
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             MeetingOutcomeCreate(
                 meeting_status="invalid_status"
             )
