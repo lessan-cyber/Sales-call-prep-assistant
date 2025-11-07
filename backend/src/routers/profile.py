@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase_auth.types import User
+
 from supabase import AsyncClient
 
 from ..dependencies import get_current_user, get_supabase_client
@@ -21,7 +22,9 @@ async def get_profile(
         .execute()
     )
     if not response.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found"
+        )
     return response.data[0]
 
 
