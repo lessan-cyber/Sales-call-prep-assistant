@@ -82,23 +82,25 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Record Meeting Outcome</DialogTitle>
-                    <DialogDescription>
-                        Help us improve by sharing how this meeting went. This information is used to calculate your success rate.
-                    </DialogDescription>
-                    <DialogClose onClick={handleClose} />
+                    <div className="flex flex-col gap-1">
+                        <DialogTitle>Record Meeting Outcome</DialogTitle>
+                        <DialogDescription>
+                            Help us improve by sharing how this meeting went. This information is used to calculate your success rate.
+                        </DialogDescription>
+                    </div>
+                    <DialogClose onClick={handleClose} className="mt-1 mr-4" />
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="grid gap-6 py-4">
+                    <div className="grid gap-8 py-6 px-6">
                         {/* Meeting Status */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="meeting-status">Meeting Status *</Label>
+                        <div className="grid gap-3 pb-2 max-w-md">
+                            <Label htmlFor="meeting-status" className="text-base font-medium">Meeting Status *</Label>
                             <select
                                 id="meeting-status"
-                                className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus-visible:ring-zinc-300"
+                                className="flex h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus-visible:ring-zinc-300"
                                 value={meetingStatus}
                                 onChange={(e) => setMeetingStatus(e.target.value as MeetingStatus)}
                                 required
@@ -111,11 +113,11 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
 
                         {/* Outcome - only show if meeting was completed */}
                         {meetingStatus === "completed" && (
-                            <div className="grid gap-2">
-                                <Label htmlFor="outcome">Overall Outcome</Label>
+                            <div className="grid gap-3 pb-2 max-w-md">
+                                <Label htmlFor="outcome" className="text-base font-medium">Overall Outcome</Label>
                                 <select
                                     id="outcome"
-                                    className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus-visible:ring-zinc-300"
+                                    className="flex h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus-visible:ring-zinc-300"
                                     value={outcome}
                                     onChange={(e) => setOutcome(e.target.value as MeetingOutcome | "")}
                                 >
@@ -124,7 +126,7 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
                                     <option value="needs_improvement">Needs Improvement 🔄</option>
                                     <option value="lost_opportunity">Lost Opportunity ❌</option>
                                 </select>
-                                <p className="text-xs text-zinc-500">
+                                <p className="text-sm text-zinc-500">
                                     This helps calculate your success rate
                                 </p>
                             </div>
@@ -132,12 +134,12 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
 
                         {/* Prep Accuracy - only show if outcome is selected */}
                         {meetingStatus === "completed" && outcome && (
-                            <div className="grid gap-2">
-                                <Label htmlFor="prep-accuracy">
+                            <div className="grid gap-3 pb-2 max-w-lg">
+                                <Label htmlFor="prep-accuracy" className="text-base font-medium">
                                     How accurate was the prep? (1-5 scale)
                                 </Label>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-zinc-500">1</span>
+                                <div className="flex items-center gap-4 px-2">
+                                    <span className="text-sm text-zinc-500 font-medium">1</span>
                                     <input
                                         type="range"
                                         id="prep-accuracy"
@@ -145,13 +147,13 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
                                         max="5"
                                         value={prepAccuracy}
                                         onChange={(e) => setPrepAccuracy(parseInt(e.target.value))}
-                                        className="flex-1"
+                                        className="flex-1 h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer dark:bg-zinc-700"
                                     />
-                                    <span className="text-sm text-zinc-500">5</span>
+                                    <span className="text-sm text-zinc-500 font-medium">5</span>
                                 </div>
-                                <div className="text-center">
-                                    <span className="text-sm font-medium">{prepAccuracy}</span>
-                                    <span className="text-xs text-zinc-500 ml-1">
+                                <div className="text-center mt-2">
+                                    <span className="text-base font-semibold">{prepAccuracy}</span>
+                                    <span className="text-sm text-zinc-500 ml-2">
                                         {prepAccuracy <= 2 ? "Not very accurate" :
                                          prepAccuracy <= 3 ? "Somewhat accurate" :
                                          prepAccuracy <= 4 ? "Quite accurate" : "Very accurate"}
@@ -162,13 +164,13 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
 
                         {/* Most Useful Section - only show if outcome is selected */}
                         {meetingStatus === "completed" && outcome && (
-                            <div className="grid gap-2">
-                                <Label htmlFor="most-useful-section">
+                            <div className="grid gap-3 pb-2 max-w-md">
+                                <Label htmlFor="most-useful-section" className="text-base font-medium">
                                     Most Useful Section
                                 </Label>
                                 <select
                                     id="most-useful-section"
-                                    className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus-visible:ring-zinc-300"
+                                    className="flex h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus-visible:ring-zinc-300"
                                     value={mostUsefulSection}
                                     onChange={(e) => setMostUsefulSection(e.target.value as PrepSection | "")}
                                 >
@@ -184,8 +186,8 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
 
                         {/* What Was Missing */}
                         {meetingStatus === "completed" && outcome && (
-                            <div className="grid gap-2">
-                                <Label htmlFor="what-missing">
+                            <div className="grid gap-3 max-w-2xl">
+                                <Label htmlFor="what-missing" className="text-base font-medium">
                                     What was missing from the prep?
                                 </Label>
                                 <Textarea
@@ -193,15 +195,16 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
                                     placeholder="e.g., More information about their pricing, competitor analysis, etc."
                                     value={whatWasMissing}
                                     onChange={(e) => setWhatWasMissing(e.target.value)}
-                                    rows={3}
+                                    rows={4}
+                                    className="min-h-[120px] resize-y"
                                 />
                             </div>
                         )}
 
                         {/* General Notes */}
                         {meetingStatus === "completed" && outcome && (
-                            <div className="grid gap-2">
-                                <Label htmlFor="general-notes">
+                            <div className="grid gap-3 max-w-2xl">
+                                <Label htmlFor="general-notes" className="text-base font-medium">
                                     General Notes
                                 </Label>
                                 <Textarea
@@ -209,7 +212,8 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
                                     placeholder="Any additional thoughts about the meeting..."
                                     value={generalNotes}
                                     onChange={(e) => setGeneralNotes(e.target.value)}
-                                    rows={4}
+                                    rows={5}
+                                    className="min-h-[150px] resize-y"
                                 />
                             </div>
                         )}
