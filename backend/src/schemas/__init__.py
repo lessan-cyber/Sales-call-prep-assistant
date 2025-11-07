@@ -14,6 +14,13 @@ from .prep_report import (
     DecisionMaker,
     NewsItem
 )
+from .meeting_outcome import (
+    MeetingOutcomeCreate,
+    MeetingOutcomeResponse,
+    MeetingStatus,
+    MeetingOutcomeValue,
+    PrepSection
+)
 
 __all__ = [
     "UserProfile",
@@ -29,5 +36,10 @@ __all__ = [
     "PainPoint",
     "PortfolioMatch",
     "DecisionMaker",
-    "NewsItem"
+    "NewsItem",
+    "MeetingOutcomeCreate",
+    "MeetingOutcomeResponse",
+    "MeetingStatus",
+    "MeetingOutcomeValue",
+    "PrepSection"
 ]

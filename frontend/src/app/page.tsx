@@ -1,10 +1,43 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuthAndRedirect = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session) {
+          // User is authenticated, redirect to dashboard
+          router.push("/dashboard");
+          return;
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        setLoading(false);
+      }
+    };
+
+    checkAuthAndRedirect();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
@@ -20,18 +53,18 @@ export default function Home() {
           <div className="flex gap-4 mt-8">
             <Button
               size="lg"
-              onClick={() => router.push("/new-prep")}
+              onClick={() => router.push("/login")}
               className="px-8"
             >
-              Create New Prep
+              Login
             </Button>
             <Button
               size="lg"
               variant="outline"
-              onClick={() => router.push("/profile")}
+              onClick={() => router.push("/signup")}
               className="px-8"
             >
-              View Profile
+              Sign Up
             </Button>
           </div>
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">

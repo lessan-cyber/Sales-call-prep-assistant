@@ -12,6 +12,7 @@ from supabase import AsyncClient
 from ..agents import research_orchestrator, sales_brief_synthesizer
 from ..dependencies import get_current_user, get_supabase_client
 from ..schemas.prep_report import PrepRequest
+from ..schemas.meeting_outcome import MeetingOutcomeCreate
 from ..services.cache_service import CacheService
 from ..services.supabase_service import SupabaseService, get_supabase_service
 from ..utils.logger import error, info
@@ -220,3 +221,100 @@ async def get_prep_report(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error processing report data.",
         )
+
+
+@router.post("/preps/{prep_id}/outcome", status_code=status.HTTP_201_CREATED)
+async def record_meeting_outcome(
+    prep_id: str,
+    outcome_data: MeetingOutcomeCreate,
+    current_user: User = Depends(get_current_user),
+    supabase: AsyncClient = Depends(get_supabase_client),
+):
+    """
+    Record or update a meeting outcome for a prep.
+
+    Args:
+        prep_id: UUID of the prep
+        outcome_data: Meeting outcome data (validated by Pydantic)
+        current_user: Authenticated user
+        supabase: Supabase client
+
+    Returns:
+        Success message with outcome ID
+    """
+    from ..services.supabase_service import get_supabase_service
+
+    info(
+        f"Recording meeting outcome for prep ID: {prep_id} "
+        f"by user: {current_user.id}"
+    )
+
+    # Verify the prep belongs to the current user
+    supabase_service = get_supabase_service()
+    prep_data = await supabase_service.get_meeting_prep(prep_id, str(current_user.id))
+
+    if not prep_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prep not found or not authorized.",
+        )
+
+    # Save the outcome (outcome_data is already validated by FastAPI)
+    outcome_id = await supabase_service.save_meeting_outcome(
+        prep_id=prep_id,
+        outcome_data=outcome_data.model_dump(exclude_unset=True)
+    )
+
+    if not outcome_id:
+        error(f"Failed to save meeting outcome for prep {prep_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save meeting outcome.",
+        )
+
+    info(f"✓ Meeting outcome saved with ID: {outcome_id}")
+
+    return {
+        "message": "Meeting outcome recorded successfully",
+        "outcome_id": outcome_id
+    }
+
+
+@router.get("/preps/{prep_id}/outcome", status_code=status.HTTP_200_OK)
+async def get_meeting_outcome(
+    prep_id: str,
+    current_user: User = Depends(get_current_user),
+    supabase: AsyncClient = Depends(get_supabase_client),
+):
+    """
+    Retrieve a meeting outcome for a prep.
+
+    Args:
+        prep_id: UUID of the prep
+        current_user: Authenticated user
+        supabase: Supabase client
+
+    Returns:
+        The meeting outcome
+    """
+    from ..services.supabase_service import get_supabase_service
+
+    info(
+        f"Fetching meeting outcome for prep ID: {prep_id} "
+        f"by user: {current_user.id}"
+    )
+
+    # Verify the prep belongs to the current user
+    supabase_service = get_supabase_service()
+    prep_data = await supabase_service.get_meeting_prep(prep_id, str(current_user.id))
+
+    if not prep_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prep not found or not authorized.",
+        )
+
+    # Get the outcome
+    outcome = await supabase_service.get_meeting_outcome(prep_id)
+
+    return outcome

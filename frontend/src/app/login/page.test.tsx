@@ -156,7 +156,7 @@ describe('LoginPage', () => {
     }, { timeout: 3000 });
   });
 
-  it('should redirect to home if already logged in', () => {
+  it('should redirect to home if already logged in', async () => {
     (useAuth as jest.Mock).mockReturnValue({
       session: { user: { id: 'user-123' } },
       user: { company_name: 'Test Co' },
@@ -165,7 +165,11 @@ describe('LoginPage', () => {
 
     render(<LoginPage />);
 
-    // Component renders null when already logged in
+    // Wait for async effect to complete and assert redirect
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(mockPush).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('should show loading state while auth is loading', () => {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { use } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { info } from "@/lib/logger";
 import {
     Card,
     CardContent,
@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { exportPrepToPDF } from "@/utils/exportToPDF";
+import { RecordOutcome } from "@/components/RecordOutcome";
 
 interface PrepData {
     executive_summary: {
@@ -98,6 +99,7 @@ export default function PrepDetailPage({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [pdfLoading, setPdfLoading] = useState(false);
+    const [outcomeModalOpen, setOutcomeModalOpen] = useState(false);
 
     // Handle PDF export
     const handleExportPDF = async () => {
@@ -184,7 +186,7 @@ export default function PrepDetailPage({
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">Sales Prep Report</h1>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                     <Badge
                         className={getConfidenceColor(
                             prepData.overall_confidence,
@@ -203,6 +205,11 @@ export default function PrepDetailPage({
                         disabled={pdfLoading}
                     >
                         {pdfLoading ? "Exporting..." : "Export PDF"}
+                    </Button>
+                    <Button
+                        onClick={() => setOutcomeModalOpen(true)}
+                    >
+                        Record Outcome
                     </Button>
                 </div>
             </div>
@@ -703,6 +710,17 @@ export default function PrepDetailPage({
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Record Outcome Modal */}
+            <RecordOutcome
+                open={outcomeModalOpen}
+                onOpenChange={setOutcomeModalOpen}
+                prepId={id}
+                onSuccess={() => {
+                    // Optionally refresh data or show success message
+                    info("Outcome recorded successfully");
+                }}
+            />
         </div>
     );
 }

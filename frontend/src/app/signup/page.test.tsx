@@ -100,7 +100,7 @@ describe('SignupPage', () => {
     });
   });
 
-  it('should validate password strength', async () => {
+  it('should validate password strength on submit', async () => {
     const user = userEvent.setup();
 
     render(<SignupPage />);
@@ -110,7 +110,13 @@ describe('SignupPage', () => {
     await user.type(screen.getByLabelText(/confirm password/i), '123');
 
     const submitButton = screen.getByRole('button', { name: /sign up/i });
-    expect(submitButton).toBeDisabled();
+    await user.click(submitButton);
+
+    // Should show error message instead of submitting (the error text is slightly different from the hint)
+    await waitFor(() => {
+      expect(screen.getByText('Password must be at least 6 characters')).toBeInTheDocument();
+    });
+    expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   it('should redirect if already logged in', () => {

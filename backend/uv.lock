@@ -270,7 +270,6 @@ dependencies = [
     { name = "apify-client" },
     { name = "fastapi", extra = ["standard"] },
     { name = "firecrawl" },
-    { name = "firecrawl-py" },
     { name = "google-genai" },
     { name = "pydantic-ai" },
     { name = "pydantic-ai-slim", extra = ["google", "logfire", "openai"] },
@@ -299,7 +298,6 @@ requires-dist = [
     { name = "apify-client", specifier = ">=2.2.1" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.120.1" },
     { name = "firecrawl", specifier = ">=4.5.0" },
-    { name = "firecrawl-py", specifier = ">=4.6.0" },
     { name = "google-genai", specifier = ">=1.46.0" },
     { name = "pydantic-ai", specifier = ">=1.7.0" },
     { name = "pydantic-ai-slim", extras = ["google", "logfire", "openai"], specifier = ">=1.7.0" },
@@ -905,24 +903,6 @@ wheels = [
 
 [[package]]
 name = "firecrawl"
-version = "4.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "httpx" },
-    { name = "nest-asyncio" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "websockets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/d7/c061219ecb50aaaa74e6768123a3c21183c0f03d790164810e6306dbce41/firecrawl-4.5.0.tar.gz", hash = "sha256:d16c8a98f2bd04a04138dc9e4fe9dbc799e9bcb448f2dcb6142e9ad59238078c", size = 134750, upload-time = "2025-10-17T15:18:09.971Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/49/7d015e8ca3c7163891ca8e524247beb2849f091484737f18b17d6a1b1e7d/firecrawl-4.5.0-py3-none-any.whl", hash = "sha256:c1c7f0164e93840266b12eee32611f7d036fc896b7cec0f1b7b5ec46483236e6", size = 171322, upload-time = "2025-10-17T15:18:08.372Z" },
-]
-
-[[package]]
-name = "firecrawl-py"
 version = "4.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
@@ -934,9 +914,9 @@ dependencies = [
     { name = "requests" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a1/9a/942f81b41db203a0a9fe4477f3c1d7023036ef30b648f3177dab5e97fdc9/firecrawl_py-4.6.0.tar.gz", hash = "sha256:fe1ce1343275169e2562e83296fe0a4b5419d1210d546d4f998a6ef21218f739", size = 136417, upload-time = "2025-11-05T00:41:55.537Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/db/90861dbfa8b6e47e4e45aaa2843800e245c6a3a3a2a26c795851f879526d/firecrawl-4.6.0.tar.gz", hash = "sha256:28217479ec887457a370a20752311c439919041914b42f70fa462006eb6bf5dc", size = 136373, upload-time = "2025-11-05T00:42:02.955Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/17/e70c0963220991d2585fb7605f9408530a939c56d08177949a2445f26de2/firecrawl_py-4.6.0-py3-none-any.whl", hash = "sha256:7e4b4d203b319fdc423918e37ef48c48105dc46485313e6679ebe8c17995bc0d", size = 173255, upload-time = "2025-11-05T00:41:53.938Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/04/441922a3522db2d572e66d4420f4391250bf95d22c6ee65c6c9e42c73fae/firecrawl-4.6.0-py3-none-any.whl", hash = "sha256:240ef1ca706f1b23fa66ab57161b441a5072748e9a622ec2ea1167ab8bc93907", size = 173223, upload-time = "2025-11-05T00:42:00.901Z" },
 ]
 
 [[package]]

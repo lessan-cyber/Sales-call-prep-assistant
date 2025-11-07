@@ -9,7 +9,6 @@ dependencies = [
     "apify-client>=2.2.1",
     "fastapi[standard]>=0.120.1",
     "firecrawl>=4.5.0",
-    "firecrawl-py>=4.6.0",
     "google-genai>=1.46.0",
     "pydantic-ai>=1.7.0",
     "pydantic-ai-slim[google,logfire,openai]>=1.7.0",

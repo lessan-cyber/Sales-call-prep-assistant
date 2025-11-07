@@ -1,6 +1,6 @@
 """Firecrawl client wrapper for web scraping."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from firecrawl import Firecrawl
 
@@ -73,7 +73,7 @@ class FirecrawlService:
 
     def _categorize_error(
         self, url: str, exception: Exception, result_key: str = "content"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Categorize exceptions and return structured error response.
 
@@ -109,7 +109,7 @@ class FirecrawlService:
 
     async def scrape_website(
         self, url: str, formats: Optional[list] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Scrape a website URL using Firecrawl.
 
@@ -173,8 +173,8 @@ class FirecrawlService:
             return self._categorize_error(url, e)
 
     async def extract_with_schema(
-        self, url: str, schema: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, url: str, schema: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Extract structured data from a website using a schema.
 
