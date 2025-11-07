@@ -203,6 +203,128 @@ class SupabaseService:
         # Simple score: matches / total query terms
         return matches / len(query_terms) if query_terms else 0.0
 
+    async def save_meeting_outcome(
+        self,
+        prep_id: str,
+        outcome_data: Dict[str, Any]
+    ) -> Optional[str]:
+        """
+        Save or update a meeting outcome.
+
+        Args:
+            prep_id: UUID of the prep
+            outcome_data: Meeting outcome data
+
+        Returns:
+            ID of the saved outcome or None if error
+        """
+        try:
+            # Check if outcome already exists
+            existing_response = (
+                await self.supabase.table("meeting_outcomes")
+                .select("id")
+                .eq("prep_id", prep_id)
+                .execute()
+            )
+
+            if existing_response.data:
+                # Update existing outcome
+                response = (
+                    await self.supabase.table("meeting_outcomes")
+                    .update({
+                        **outcome_data,
+                        "updated_at": "NOW()"
+                    })
+                    .eq("prep_id", prep_id)
+                    .execute()
+                )
+                info(f"Updated meeting outcome for prep {prep_id}")
+            else:
+                # Create new outcome
+                outcome_record = {
+                    "prep_id": prep_id,
+                    **outcome_data
+                }
+                response = await self.supabase.table("meeting_outcomes").insert(outcome_record).execute()
+                info(f"Created meeting outcome for prep {prep_id}")
+
+            if response.data:
+                return response.data[0]["id"]
+
+            return None
+
+        except Exception as e:
+            error(f"Error saving meeting outcome: {e}")
+            return None
+
+    async def get_meeting_outcome(self, prep_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve a meeting outcome by prep ID.
+
+        Args:
+            prep_id: UUID of the prep
+
+        Returns:
+            Meeting outcome data or None if not found
+        """
+        try:
+            response = (
+                await self.supabase.table("meeting_outcomes")
+                .select("*")
+                .eq("prep_id", prep_id)
+                .limit(1)
+                .execute()
+            )
+
+            if response.data:
+                return response.data[0]
+            return None
+
+        except Exception as e:
+            error(f"Error retrieving meeting outcome: {e}")
+            return None
+
+    async def get_user_meeting_outcomes(
+        self,
+        user_id: str,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all meeting outcomes for a user.
+
+        Args:
+            user_id: UUID of the user
+            limit: Maximum number of outcomes to return
+
+        Returns:
+            List of meeting outcomes with prep data
+        """
+        try:
+            response = (
+                await self.supabase.table("meeting_outcomes")
+                .select("""
+                    *,
+                    meeting_preps:prep_id (
+                        id,
+                        company_name,
+                        meeting_objective,
+                        meeting_date,
+                        created_at,
+                        overall_confidence
+                    )
+                """)
+                .eq("meeting_preps.user_id", user_id)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+
+            return response.data if response.data else []
+
+        except Exception as e:
+            error(f"Error retrieving meeting outcomes: {e}")
+            return []
+
     async def log_api_usage(
         self,
         user_id: Optional[str],
