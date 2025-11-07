@@ -16,7 +16,7 @@ const MAX_PORTFOLIO_ITEMS = 20;
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, loading, session } = useAuth();
+  const { user, loading, profileLoading, session } = useAuth();
   const [isEditMode, setIsEditMode] = useState(false);
   const [formState, setFormState] = useState<UserProfile>({
     company_name: "",
@@ -33,7 +33,8 @@ export default function ProfilePage() {
   const isFormInitialized = useRef(false);
 
   useEffect(() => {
-    if (!loading) {
+    // Wait for both auth loading and profile loading to complete
+    if (!loading && !profileLoading) {
       if (!session) {
         router.push("/login");
       } else if (user) {
@@ -65,7 +66,7 @@ export default function ProfilePage() {
         }
       }
     }
-  }, [loading, session, user, router]);
+  }, [loading, profileLoading, session, user, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -147,7 +148,7 @@ export default function ProfilePage() {
     setError(null);
   };
 
-  if (loading) {
+  if (loading || profileLoading) {
     return <div className="flex min-h-screen items-center justify-center"><p>Loading profile...</p></div>;
   }
 
