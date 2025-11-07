@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { info } from "@/lib/logger";
 import {
     Card,
     CardContent,
@@ -90,10 +91,10 @@ function getConfidenceLabel(confidence: number): string {
 export default function PrepDetailPage({
     params,
 }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }) {
     const router = useRouter();
-    const { id } = params;
+    const { id } = use(params);
     const [prepData, setPrepData] = useState<PrepData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -717,7 +718,7 @@ export default function PrepDetailPage({
                 prepId={id}
                 onSuccess={() => {
                     // Optionally refresh data or show success message
-                    console.log("Outcome recorded successfully");
+                    info("Outcome recorded successfully");
                 }}
             />
         </div>
