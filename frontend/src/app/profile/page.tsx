@@ -130,8 +130,8 @@ export default function ProfilePage() {
 
       const data = await response.json();
       alert("Profile saved successfully!");
-      // Return to view mode after saving
-      setIsEditMode(false);
+      // Redirect to dashboard after successful save
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);
     } finally {

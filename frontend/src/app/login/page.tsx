@@ -26,9 +26,9 @@ export default function LoginPage() {
     // Only redirect if both session and user are available
     if (session && user !== undefined) {
       // Check if user has a profile
-      // If user exists (has profile), redirect to home
+      // If user exists (has profile), redirect to dashboard
       // If user is null (no profile), redirect to profile
-      const destination = user ? '/' : '/profile';
+      const destination = user ? '/dashboard' : '/profile';
       info(`User already logged in, redirecting to ${destination}`);
       router.push(destination);
     }
@@ -64,7 +64,7 @@ export default function LoginPage() {
             Authorization: `Bearer ${data.session.access_token}`,
           },
         });
-        const destination = response.ok ? '/' : '/profile';
+        const destination = response.ok ? '/dashboard' : '/profile';
         info(`Login successful, redirecting to ${destination}`);
         router.push(destination);
       } catch (err) {
