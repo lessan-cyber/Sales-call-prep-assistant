@@ -209,7 +209,7 @@ GOOGLE_API_KEY=your-google-api-key
 SERP_API_KEY=your-serpapi-key
 FIRECRAWL_API_KEY=your-firecrawl-key
 APIFY_API_KEY=your-apify-key
-GEMINI_MODEL=gemini-2.0-flash-exp
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
 Create `frontend/.env.local`:
@@ -435,4 +435,3 @@ According to the PRD (`docs/PRD.md`):
 - SerpAPI and Firecrawl have rate limits
 - Cache hits reduce API calls significantly
 - Monitor usage in `api_usage_logs` table
-- stop putting your name in the commit messages

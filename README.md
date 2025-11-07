@@ -14,7 +14,8 @@
 
 ## 🎯 Overview
 
-The Sales Call Prep Assistant is an AI-powered tool that helps  professionals (freelancers, consultants, and SDRs) prepare for sales calls in minutes instead of hours. It automatically researches prospects and generates personalized talking points using a sophisticated two-agent system with tool-calling architecture.
+
+The Sales Call Prep Assistant is an AI-powered tool that helps professionals (freelancers, consultants, and SDRs) prepare for sales calls in minutes instead of hours. It automatically researches prospects and generates personalized talking points using a sophisticated two-agent system with tool-calling architecture.
 
 **What it does:**
 - Automatically researches prospect companies and decision makers
