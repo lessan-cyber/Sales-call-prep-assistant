@@ -2,49 +2,97 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
+import { error as loggerError } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-interface DashboardData {
-    total_preps: number;
-    success_rate: number;
-    total_successful: number;
-    total_completed: number;
-    avg_confidence: number;
-    time_saved_hours: number;
-    time_saved_minutes: number;
-    recent_preps: Array<{
-        id: string;
-        company_name: string;
-        meeting_objective: string;
-        meeting_date: string | null;
-        created_at: string;
-        overall_confidence: number;
-    }>;
-    upcoming_meetings: Array<{
-        id: string;
-        company_name: string;
-        meeting_objective: string;
-        meeting_date: string;
-    }>;
-}
+// Zod schema for runtime validation of dashboard data
+const RecentPrepSchema = z.object({
+    id: z.string(),
+    company_name: z.string(),
+    meeting_objective: z.string(),
+    meeting_date: z.string().nullable(),
+    created_at: z.string(),
+    overall_confidence: z.number(),
+    outcome_status: z.enum(["completed", "cancelled", "rescheduled"]).nullable(),
+});
+
+const UpcomingMeetingSchema = z.object({
+    id: z.string(),
+    company_name: z.string(),
+    meeting_objective: z.string(),
+    meeting_date: z.string(),
+});
+
+const DashboardDataSchema = z.object({
+    total_preps: z.number(),
+    success_rate: z.number(),
+    total_successful: z.number(),
+    total_completed: z.number(),
+    avg_confidence: z.number(),
+    time_saved_hours: z.number(),
+    time_saved_minutes: z.number(),
+    recent_preps: z.array(RecentPrepSchema),
+    upcoming_meetings: z.array(UpcomingMeetingSchema),
+});
+
+// TypeScript type inferred from Zod schema for type safety
+type DashboardData = z.infer<typeof DashboardDataSchema>;
+
+// Confidence score thresholds for UI classification
+const CONFIDENCE_HIGH = 0.8;
+const CONFIDENCE_MEDIUM = 0.6;
 
 function getConfidenceColor(confidence: number): string {
-    if (confidence >= 0.8) return "bg-green-100 text-green-800";
-    if (confidence >= 0.6) return "bg-yellow-100 text-yellow-800";
+    if (confidence >= CONFIDENCE_HIGH) return "bg-green-100 text-green-800";
+    if (confidence >= CONFIDENCE_MEDIUM) return "bg-yellow-100 text-yellow-800";
     return "bg-red-100 text-red-800";
 }
 
 function getConfidenceLabel(confidence: number): string {
-    if (confidence >= 0.8) return "High";
-    if (confidence >= 0.6) return "Medium";
+    if (confidence >= CONFIDENCE_HIGH) return "High";
+    if (confidence >= CONFIDENCE_MEDIUM) return "Medium";
     return "Low";
+}
+
+function getOutcomeBadgeVariant(outcomeStatus: string | null) {
+    switch (outcomeStatus) {
+        case "completed":
+            return "default";
+        case "cancelled":
+            return "destructive";
+        case "rescheduled":
+            return "secondary";
+        default:
+            return "outline";
+    }
+}
+
+function getOutcomeBadgeLabel(outcomeStatus: string | null) {
+    switch (outcomeStatus) {
+        case "completed":
+            return "Completed";
+        case "cancelled":
+            return "Cancelled";
+        case "rescheduled":
+            return "Rescheduled";
+        default:
+            return "Pending";
+    }
 }
 
 function formatDate(dateString: string): string {
     const date = new Date(dateString);
+
+    // Validate that the date is valid
+    if (isNaN(date.getTime())) {
+        console.warn("Invalid date string:", dateString);
+        return "Invalid date";
+    }
+
     return date.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -54,8 +102,21 @@ function formatDate(dateString: string): string {
 
 function formatRelativeTime(dateString: string): string {
     const date = new Date(dateString);
+
+    // Validate that the date is valid
+    if (isNaN(date.getTime())) {
+        console.warn("Invalid date string for relative time:", dateString);
+        return "Invalid date";
+    }
+
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    // Guard against future dates or invalid time differences
+    if (diffInSeconds < 0) {
+        // Date is in the future, fall back to formatted date
+        return formatDate(dateString);
+    }
 
     if (diffInSeconds < 60) return "Just now";
     if (diffInSeconds < 3600)
@@ -76,10 +137,18 @@ export default function DashboardPage() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        fetchDashboardData();
+        // Create AbortController for cleanup on unmount
+        const abortController = new AbortController();
+
+        fetchDashboardData(abortController.signal);
+
+        // Cleanup function: abort the request if component unmounts
+        return () => {
+            abortController.abort();
+        };
     }, []);
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (signal?: AbortSignal) => {
         try {
             setLoading(true);
             const supabase = createClient();
@@ -100,6 +169,7 @@ export default function DashboardPage() {
                     headers: {
                         Authorization: `Bearer ${session?.access_token}`,
                     },
+                    signal, // Pass the abort signal
                 },
             );
 
@@ -107,10 +177,37 @@ export default function DashboardPage() {
                 throw new Error("Failed to fetch dashboard data");
             }
 
-            const data = await response.json();
-            setDashboardData(data);
+            const rawData = await response.json();
+
+            // Validate the response data using Zod
+            const validationResult = DashboardDataSchema.safeParse(rawData);
+
+            if (!validationResult.success) {
+                // Log the validation errors
+                loggerError(
+                    "Dashboard data validation failed",
+                    { validationErrors: validationResult.error.format() }
+                );
+                throw new Error(
+                    "Invalid dashboard data received from server",
+                );
+            }
+
+            // Validation successful, use the validated data
+            const validatedData = validationResult.data;
+
+            // Convert string dates to Date objects if needed for runtime processing
+            // Note: We keep them as strings since the UI components expect strings
+            // but the schema ensures they are valid date strings
+            setDashboardData(validatedData);
         } catch (err) {
-            console.error("Error fetching dashboard:", err);
+            // Check if the request was aborted
+            if (err instanceof Error && err.name === "AbortError") {
+                // Request was aborted due to component unmount, silently return
+                return;
+            }
+
+            loggerError("Error fetching dashboard", { error: err });
             setError(
                 err instanceof Error ? err.message : "Failed to load dashboard",
             );
@@ -121,6 +218,10 @@ export default function DashboardPage() {
 
     const handleCreateNewPrep = () => {
         router.push("/new-prep");
+    };
+
+    const handleRetry = () => {
+        fetchDashboardData();
     };
 
     const handleViewPrep = (prepId: string) => {
@@ -143,7 +244,7 @@ export default function DashboardPage() {
                 <Card>
                     <CardContent className="pt-6">
                         <p className="text-red-600">{error}</p>
-                        <Button onClick={fetchDashboardData} className="mt-4">
+                        <Button onClick={handleRetry} className="mt-4">
                             Retry
                         </Button>
                     </CardContent>
@@ -326,22 +427,22 @@ export default function DashboardPage() {
                             <table className="w-full">
                                 <thead className="border-b">
                                     <tr>
-                                        <th className="text-left p-4 font-medium text-zinc-300">
+                                        <th className="text-left p-4 font-medium text-zinc-500">
                                             Company
                                         </th>
-                                        <th className="text-left p-4 font-medium text-zinc-300">
+                                        <th className="text-left p-4 font-medium text-zinc-500">
                                             Objective
                                         </th>
-                                        <th className="text-left p-4 font-medium text-zinc-300">
+                                        <th className="text-left p-4 font-medium text-zinc-500">
                                             Created
                                         </th>
-                                        <th className="text-left p-4 font-medium text-zinc-300">
+                                        <th className="text-left p-4 font-medium text-zinc-500">
                                             Confidence
                                         </th>
-                                        <th className="text-left p-4 font-medium text-zinc-300">
+                                        <th className="text-left p-4 font-medium text-zinc-500">
                                             Status
                                         </th>
-                                        <th className="text-left p-4 font-medium text-zinc-300">
+                                        <th className="text-left p-4 font-medium text-zinc-500">
                                             Actions
                                         </th>
                                     </tr>
@@ -382,8 +483,8 @@ export default function DashboardPage() {
                                                 </Badge>
                                             </td>
                                             <td className="p-4">
-                                                <Badge variant="outline">
-                                                    Pending
+                                                <Badge variant={getOutcomeBadgeVariant(prep.outcome_status)}>
+                                                    {getOutcomeBadgeLabel(prep.outcome_status)}
                                                 </Badge>
                                             </td>
                                             <td className="p-4">
@@ -393,6 +494,7 @@ export default function DashboardPage() {
                                                     onClick={() =>
                                                         handleViewPrep(prep.id)
                                                     }
+                                                    aria-label={`View prep for ${prep.company_name}`}
                                                 >
                                                     View
                                                 </Button>
