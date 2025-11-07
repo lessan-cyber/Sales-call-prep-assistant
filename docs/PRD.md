@@ -528,7 +528,7 @@ This architecture uses **intelligent tool-calling** instead of pre-fetching all 
 
 **Purpose**: Intelligently gather data about the prospect company and decision maker.
 
-**Model**: Gemini 2.5 Pro
+**Model**: Gemini 2.5 flash
 
 **Input**:
 - Company name (required)
