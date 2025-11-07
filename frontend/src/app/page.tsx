@@ -10,26 +10,26 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthAndRedirect();
-  }, []);
+    const checkAuthAndRedirect = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
 
-  const checkAuthAndRedirect = async () => {
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // User is authenticated, redirect to dashboard
+          router.push("/dashboard");
+          return;
+        }
 
-      if (session) {
-        // User is authenticated, redirect to dashboard
-        router.push("/dashboard");
-        return;
+        setLoading(false);
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        setLoading(false);
       }
+    };
 
-      setLoading(false);
-    } catch (error) {
-      console.error("Error checking auth:", error);
-      setLoading(false);
-    }
-  };
+    checkAuthAndRedirect();
+  }, [router]);
 
   if (loading) {
     return (

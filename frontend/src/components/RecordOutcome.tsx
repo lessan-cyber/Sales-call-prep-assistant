@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -35,10 +36,18 @@ export function RecordOutcome({ open, onOpenChange, prepId, onSuccess }: RecordO
         setError(null);
 
         try {
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session?.access_token) {
+                throw new Error("Authentication required. Please log in again.");
+            }
+
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/preps/${prepId}/outcome`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
                 },
                 credentials: "include",
                 body: JSON.stringify({

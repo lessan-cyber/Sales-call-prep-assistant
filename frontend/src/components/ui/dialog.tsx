@@ -19,6 +19,15 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
             <div
                 className="fixed inset-0 bg-black/50"
                 onClick={() => onOpenChange?.(false)}
+                role="button"
+                tabIndex={0}
+                aria-label="Close dialog backdrop"
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+                        e.preventDefault();
+                        onOpenChange?.(false);
+                    }
+                }}
             />
             {/* Dialog content */}
             <div className="relative z-50">
