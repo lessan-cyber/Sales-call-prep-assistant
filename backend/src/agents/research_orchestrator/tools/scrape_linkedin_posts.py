@@ -1,6 +1,6 @@
 """LinkedIn posts scraping tool for Agent A - Research Orchestrator."""
 
-from typing import Any, Dict, List
+from typing import Any
 
 from pydantic_ai import Tool
 
@@ -8,7 +8,7 @@ from ....services.apify_service import apify_service
 from ....utils.logger import info
 
 
-async def scrape_linkedin_posts(company_name: str, limit: int = 10) -> Dict[str, Any]:
+async def scrape_linkedin_posts(company_name: str, limit: int = 10) -> dict[str, Any]:
     """
     Scrape recent LinkedIn posts from a company or a profile using Apify actor.
 
