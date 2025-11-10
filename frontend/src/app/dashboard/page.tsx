@@ -147,6 +147,8 @@ export default function DashboardPage() {
                 validationResult.error.format()
             );
             setValidationError(true);
+        } else {
+            setValidationError(false);
         }
     }, [validationResult]);
 
