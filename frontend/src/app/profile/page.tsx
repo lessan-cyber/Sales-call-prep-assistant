@@ -40,6 +40,7 @@ export default function ProfilePage() {
     });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
     const isFormInitialized = useRef(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -194,6 +195,7 @@ export default function ProfilePage() {
             }
 
             const data = await response.json();
+            setSubmitting(true);
             setSuccess("Profile saved successfully!");
 
             // Redirect to dashboard after short delay to show success message
@@ -208,6 +210,7 @@ export default function ProfilePage() {
             // Safe error handling: narrow unknown to Error or convert to string
             const errorMessage = err instanceof Error ? err.message : String(err);
             setError(errorMessage);
+            setSubmitting(false);
         } finally {
             // setLoading(false); // AuthProvider handles global loading
         }
@@ -425,6 +428,7 @@ export default function ProfilePage() {
                                     value={formState.company_name}
                                     onChange={handleChange}
                                     required
+                                    disabled={submitting}
                                 />
                             </div>
                             <div className="grid w-full items-center gap-1.5">
@@ -438,6 +442,7 @@ export default function ProfilePage() {
                                     onChange={handleChange}
                                     maxLength={500}
                                     required
+                                    disabled={submitting}
                                 />
                             </div>
                             <div className="grid w-full items-center gap-1.5">
@@ -453,6 +458,7 @@ export default function ProfilePage() {
                                     )}
                                     onChange={handleIndustriesChange}
                                     required
+                                    disabled={submitting}
                                 />
                             </div>
                         </div>
@@ -520,6 +526,7 @@ export default function ProfilePage() {
                                                         e.target.value,
                                                     )
                                                 }
+                                                disabled={submitting}
                                             />
                                         </div>
                                         <div className="grid w-full items-center gap-1.5">
@@ -540,6 +547,7 @@ export default function ProfilePage() {
                                                         e.target.value,
                                                     )
                                                 }
+                                                disabled={submitting}
                                             />
                                         </div>
                                         <div className="grid w-full items-center gap-1.5">
@@ -560,6 +568,7 @@ export default function ProfilePage() {
                                                     )
                                                 }
                                                 maxLength={500}
+                                                disabled={submitting}
                                             />
                                         </div>
                                         <div className="grid w-full items-center gap-1.5">
@@ -579,6 +588,7 @@ export default function ProfilePage() {
                                                         e.target.value,
                                                     )
                                                 }
+                                                disabled={submitting}
                                             />
                                         </div>
                                     </CardContent>
@@ -591,6 +601,7 @@ export default function ProfilePage() {
                                 type="button"
                                 variant="outline"
                                 onClick={addProject}
+                                disabled={submitting}
                             >
                                 Add New Project
                             </Button>
@@ -600,9 +611,9 @@ export default function ProfilePage() {
                             <Button
                                 type="submit"
                                 className="flex-1"
-                                disabled={loading}
+                                disabled={loading || submitting}
                             >
-                                {loading ? "Saving..." : "Save Profile"}
+                                {submitting ? "Saving..." : loading ? "Saving..." : "Save Profile"}
                             </Button>
                             {user && (
                                 <Button
@@ -610,7 +621,7 @@ export default function ProfilePage() {
                                     variant="outline"
                                     onClick={handleCancel}
                                     className="flex-1"
-                                    disabled={loading}
+                                    disabled={loading || submitting}
                                 >
                                     Cancel
                                 </Button>
