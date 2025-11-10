@@ -39,6 +39,7 @@ export default function ProfilePage() {
             })),
     });
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
     const isFormInitialized = useRef(false);
 
     useEffect(() => {
@@ -140,6 +141,21 @@ export default function ProfilePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setSuccess(null);
+
+        // Guard: Check if user is authenticated
+        if (!session) {
+            setError("Not authenticated. Please log in again.");
+            router.push("/login");
+            return;
+        }
+
+        if (!session.access_token) {
+            setError("Authentication token missing. Please log in again.");
+            router.push("/login");
+            return;
+        }
+
         // setLoading(true); // AuthProvider handles global loading
 
         try {
@@ -149,7 +165,7 @@ export default function ProfilePage() {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${session?.access_token}`,
+                        Authorization: `Bearer ${session.access_token}`,
                     },
                     body: JSON.stringify(formState),
                 },
@@ -168,9 +184,12 @@ export default function ProfilePage() {
             }
 
             const data = await response.json();
-            alert("Profile saved successfully!");
-            // Redirect to dashboard after successful save
-            router.push("/dashboard");
+            setSuccess("Profile saved successfully!");
+
+            // Redirect to dashboard after short delay to show success message
+            setTimeout(() => {
+                router.push("/dashboard");
+            }, 1500);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -185,6 +204,7 @@ export default function ProfilePage() {
         }
         setIsEditMode(false);
         setError(null);
+        setSuccess(null);
     };
 
     if (loading || profileLoading) {
@@ -582,6 +602,9 @@ export default function ProfilePage() {
                         </div>
                         {error && (
                             <p className="text-red-500 text-sm mt-2">{error}</p>
+                        )}
+                        {success && (
+                            <p className="text-green-500 text-sm mt-2">{success}</p>
                         )}
                     </form>
                 </CardContent>
