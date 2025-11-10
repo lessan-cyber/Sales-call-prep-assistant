@@ -108,18 +108,24 @@ export default function ProfilePage() {
     };
 
     const addProject = () => {
-        setFormState((prev) => ({
-            ...prev,
-            portfolio: [
-                ...prev.portfolio,
-                {
-                    name: "",
-                    client_industry: "",
-                    description: "",
-                    key_outcomes: "",
-                },
-            ],
-        }));
+        setFormState((prev) => {
+            // Prevent adding more than MAX_PORTFOLIO_ITEMS items
+            if (prev.portfolio.length >= MAX_PORTFOLIO_ITEMS) {
+                return prev;
+            }
+            return {
+                ...prev,
+                portfolio: [
+                    ...prev.portfolio,
+                    {
+                        name: "",
+                        client_industry: "",
+                        description: "",
+                        key_outcomes: "",
+                    },
+                ],
+            };
+        });
     };
 
     const removeProject = (index: number) => {
