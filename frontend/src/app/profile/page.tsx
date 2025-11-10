@@ -628,10 +628,24 @@ export default function ProfilePage() {
                             )}
                         </div>
                         {error && (
-                            <p className="text-red-500 text-sm mt-2">{error}</p>
+                            <p
+                                className="text-red-500 text-sm mt-2"
+                                aria-live="assertive"
+                                role="alert"
+                                aria-atomic="true"
+                            >
+                                {error}
+                            </p>
                         )}
                         {success && (
-                            <p className="text-green-500 text-sm mt-2">{success}</p>
+                            <p
+                                className="text-green-500 text-sm mt-2"
+                                aria-live="polite"
+                                role="status"
+                                aria-atomic="true"
+                            >
+                                {success}
+                            </p>
                         )}
                     </form>
                 </CardContent>
