@@ -41,6 +41,7 @@ export default function ProfilePage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const isFormInitialized = useRef(false);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         // Wait for both auth loading and profile loading to complete
@@ -79,6 +80,15 @@ export default function ProfilePage() {
             }
         }
     }, [loading, profileLoading, session, user]);
+
+    // Cleanup timeout on component unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -187,7 +197,11 @@ export default function ProfilePage() {
             setSuccess("Profile saved successfully!");
 
             // Redirect to dashboard after short delay to show success message
-            setTimeout(() => {
+            // Clear any existing timeout to prevent memory leaks
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
                 router.push("/dashboard");
             }, 1500);
         } catch (err: unknown) {
