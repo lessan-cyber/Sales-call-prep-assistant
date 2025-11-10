@@ -99,6 +99,22 @@ function formatDate(dateString: string): string {
     });
 }
 
+function formatDateWithWeekday(dateString: string): string {
+    const date = new Date(dateString);
+
+    // Validate that the date is valid
+    if (isNaN(date.getTime())) {
+        console.warn("Invalid date string:", dateString);
+        return "Invalid date";
+    }
+
+    return date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+    });
+}
+
 function formatRelativeTime(dateString: string): string {
     const date = new Date(dateString);
 
@@ -402,7 +418,7 @@ export default function DashboardPage() {
                                             </p>
                                             <div className="mt-3 flex items-center gap-4 text-sm text-zinc-500">
                                                 <span>
-                                                    📅 {new Date(meeting.meeting_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                    📅 {formatDateWithWeekday(meeting.meeting_date)}
                                                 </span>
                                             </div>
                                         </div>
