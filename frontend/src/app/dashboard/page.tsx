@@ -398,7 +398,7 @@ export default function DashboardPage() {
                                             </p>
                                             <div className="mt-3 flex items-center gap-4 text-sm text-zinc-500">
                                                 <span>
-                                                    📅 Today • {new Date(meeting.meeting_date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                                    📅 {new Date(meeting.meeting_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                                 </span>
                                             </div>
                                         </div>
