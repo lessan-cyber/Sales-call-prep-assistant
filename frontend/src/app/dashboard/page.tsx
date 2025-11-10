@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,22 @@ function formatDate(dateString: string): string {
     });
 }
 
+function formatDateWithWeekday(dateString: string): string {
+    const date = new Date(dateString);
+
+    // Validate that the date is valid
+    if (isNaN(date.getTime())) {
+        console.warn("Invalid date string:", dateString);
+        return "Invalid date";
+    }
+
+    return date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+    });
+}
+
 function formatRelativeTime(dateString: string): string {
     const date = new Date(dateString);
 
@@ -128,6 +145,7 @@ function formatRelativeTime(dateString: string): string {
 
 export default function DashboardPage() {
     const router = useRouter();
+    const [validationError, setValidationError] = useState(false);
 
     // Use SWR hook for data fetching and caching
     const { data: dashboardData, error, isLoading, isValidating, refresh } = useDashboard();
@@ -137,13 +155,18 @@ export default function DashboardPage() {
         ? DashboardDataSchema.safeParse(dashboardData)
         : null;
 
-    // Handle validation errors
-    if (validationResult && !validationResult.success) {
-        console.error(
-            "Dashboard data validation failed",
-            validationResult.error.format()
-        );
-    }
+    // Set validation error in useEffect to avoid state update during render
+    useEffect(() => {
+        if (validationResult && !validationResult.success) {
+            console.error(
+                "Dashboard data validation failed",
+                validationResult.error.format()
+            );
+            setValidationError(true);
+        } else {
+            setValidationError(false);
+        }
+    }, [validationResult]);
 
     // Use validated data if validation succeeds, otherwise use raw data
     const dataToRender = validationResult?.success ? validationResult.data : dashboardData;
@@ -171,23 +194,23 @@ export default function DashboardPage() {
 
     // Filter meetings by date
     const today = getLocalDateString();
-    const todayMeetings = dataToRender?.upcoming_meetings?.filter(
-        (meeting) => meeting.meeting_date === today
-    ) || [];
-    const futureMeetings = dataToRender?.upcoming_meetings?.filter(
-        (meeting) => meeting.meeting_date > today
-    ) || [];
+    const todayMeetings = (dataToRender?.upcoming_meetings || []).filter(
+        (meeting: any) => meeting.meeting_date === today
+    );
+    const futureMeetings = (dataToRender?.upcoming_meetings || []).filter(
+        (meeting: any) => meeting.meeting_date > today
+    );
 
     // Filter preps for the table sections
     // Upcoming preps: meeting date is today or in the future
-    const upcomingPreps = dataToRender?.recent_preps?.filter(
-        (prep) => prep.meeting_date && prep.meeting_date >= today
-    ) || [];
+    const upcomingPreps = (dataToRender?.recent_preps || []).filter(
+        (prep: any) => prep.meeting_date && prep.meeting_date >= today
+    );
 
     // Old preps: meeting date has passed (yesterday or earlier)
-    const oldPreps = dataToRender?.recent_preps?.filter(
-        (prep) => prep.meeting_date && prep.meeting_date < today
-    ) || [];
+    const oldPreps = (dataToRender?.recent_preps || []).filter(
+        (prep: any) => prep.meeting_date && prep.meeting_date < today
+    );
 
     if (isLoading) {
         return (
@@ -255,6 +278,40 @@ export default function DashboardPage() {
                     )}
                 </div>
             </div>
+
+            {/* Validation Warning Banner */}
+            {validationError && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                            <svg
+                                className="h-5 w-5 text-yellow-400"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                aria-hidden="true"
+                                focusable="false"
+                            >
+                                <path
+                                    fillRule="evenodd"
+                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <h3 className="text-sm font-medium text-yellow-800">
+                                Data validation warning
+                            </h3>
+                            <div className="mt-1 text-sm text-yellow-700">
+                                <p>
+                                    Some dashboard data may be incomplete or malformed. Displaying fallback
+                                    data. Please refresh if you notice any issues.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Stats Overview - 4 Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -345,7 +402,7 @@ export default function DashboardPage() {
                         </span>
                     </div>
                     <div className="grid gap-4">
-                        {todayMeetings.map((meeting) => (
+                        {todayMeetings.map((meeting: any) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
@@ -361,7 +418,7 @@ export default function DashboardPage() {
                                             </p>
                                             <div className="mt-3 flex items-center gap-4 text-sm text-zinc-500">
                                                 <span>
-                                                    📅 Today • {new Date(meeting.meeting_date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                                    📅 {formatDateWithWeekday(meeting.meeting_date)}
                                                 </span>
                                             </div>
                                         </div>
@@ -392,7 +449,7 @@ export default function DashboardPage() {
                         Future meetings (next 7 days)
                     </p>
                     <div className="grid gap-4">
-                        {futureMeetings.map((meeting) => (
+                        {futureMeetings.map((meeting: any) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow"
@@ -469,7 +526,7 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {upcomingPreps.map((prep) => (
+                                        {upcomingPreps.map((prep: any) => (
                                             <tr
                                                 key={prep.id}
                                                 className="border-b hover:bg-neutral-800 transition-colors"
@@ -563,7 +620,7 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {oldPreps.map((prep) => (
+                                        {oldPreps.map((prep: any) => (
                                             <tr
                                                 key={prep.id}
                                                 className="border-b hover:bg-neutral-800 transition-colors"

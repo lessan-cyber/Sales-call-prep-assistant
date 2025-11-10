@@ -101,6 +101,8 @@ AS $$
             ),
             0.0
         ),
+        'time_saved_hours', COALESCE(ROUND((SELECT total_preps FROM stats) * 0.3, 1), 0.0),
+        'time_saved_minutes', COALESCE((SELECT total_preps FROM stats) * 18, 0),
         'recent_preps', (SELECT recent_preps FROM recent_preps_data),
         'upcoming_meetings', (SELECT upcoming_meetings FROM upcoming_meetings_data)
     );

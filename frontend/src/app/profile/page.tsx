@@ -39,7 +39,10 @@ export default function ProfilePage() {
             })),
     });
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
     const isFormInitialized = useRef(false);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         // Wait for both auth loading and profile loading to complete
@@ -77,7 +80,16 @@ export default function ProfilePage() {
                 }
             }
         }
-    }, [loading, profileLoading, session, user, router]);
+    }, [loading, profileLoading, session, user]);
+
+    // Cleanup timeout on component unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -140,6 +152,21 @@ export default function ProfilePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setSuccess(null);
+
+        // Guard: Check if user is authenticated
+        if (!session) {
+            setError("Not authenticated. Please log in again.");
+            router.push("/login");
+            return;
+        }
+
+        if (!session.access_token) {
+            setError("Authentication token missing. Please log in again.");
+            router.push("/login");
+            return;
+        }
+
         // setLoading(true); // AuthProvider handles global loading
 
         try {
@@ -149,7 +176,7 @@ export default function ProfilePage() {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${session?.access_token}`,
+                        Authorization: `Bearer ${session.access_token}`,
                     },
                     body: JSON.stringify(formState),
                 },
@@ -168,11 +195,22 @@ export default function ProfilePage() {
             }
 
             const data = await response.json();
-            alert("Profile saved successfully!");
-            // Redirect to dashboard after successful save
-            router.push("/dashboard");
-        } catch (err: any) {
-            setError(err.message);
+            setSubmitting(true);
+            setSuccess("Profile saved successfully!");
+
+            // Redirect to dashboard after short delay to show success message
+            // Clear any existing timeout to prevent memory leaks
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
+                router.push("/dashboard");
+            }, 1500);
+        } catch (err: unknown) {
+            // Safe error handling: narrow unknown to Error or convert to string
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            setError(errorMessage);
+            setSubmitting(false);
         } finally {
             // setLoading(false); // AuthProvider handles global loading
         }
@@ -185,6 +223,7 @@ export default function ProfilePage() {
         }
         setIsEditMode(false);
         setError(null);
+        setSuccess(null);
     };
 
     if (loading || profileLoading) {
@@ -389,6 +428,7 @@ export default function ProfilePage() {
                                     value={formState.company_name}
                                     onChange={handleChange}
                                     required
+                                    disabled={submitting}
                                 />
                             </div>
                             <div className="grid w-full items-center gap-1.5">
@@ -402,6 +442,7 @@ export default function ProfilePage() {
                                     onChange={handleChange}
                                     maxLength={500}
                                     required
+                                    disabled={submitting}
                                 />
                             </div>
                             <div className="grid w-full items-center gap-1.5">
@@ -417,6 +458,7 @@ export default function ProfilePage() {
                                     )}
                                     onChange={handleIndustriesChange}
                                     required
+                                    disabled={submitting}
                                 />
                             </div>
                         </div>
@@ -484,6 +526,7 @@ export default function ProfilePage() {
                                                         e.target.value,
                                                     )
                                                 }
+                                                disabled={submitting}
                                             />
                                         </div>
                                         <div className="grid w-full items-center gap-1.5">
@@ -504,6 +547,7 @@ export default function ProfilePage() {
                                                         e.target.value,
                                                     )
                                                 }
+                                                disabled={submitting}
                                             />
                                         </div>
                                         <div className="grid w-full items-center gap-1.5">
@@ -524,6 +568,7 @@ export default function ProfilePage() {
                                                     )
                                                 }
                                                 maxLength={500}
+                                                disabled={submitting}
                                             />
                                         </div>
                                         <div className="grid w-full items-center gap-1.5">
@@ -543,6 +588,7 @@ export default function ProfilePage() {
                                                         e.target.value,
                                                     )
                                                 }
+                                                disabled={submitting}
                                             />
                                         </div>
                                     </CardContent>
@@ -555,6 +601,7 @@ export default function ProfilePage() {
                                 type="button"
                                 variant="outline"
                                 onClick={addProject}
+                                disabled={submitting}
                             >
                                 Add New Project
                             </Button>
@@ -564,9 +611,9 @@ export default function ProfilePage() {
                             <Button
                                 type="submit"
                                 className="flex-1"
-                                disabled={loading}
+                                disabled={loading || submitting}
                             >
-                                {loading ? "Saving..." : "Save Profile"}
+                                {submitting ? "Saving..." : loading ? "Saving..." : "Save Profile"}
                             </Button>
                             {user && (
                                 <Button
@@ -574,14 +621,31 @@ export default function ProfilePage() {
                                     variant="outline"
                                     onClick={handleCancel}
                                     className="flex-1"
-                                    disabled={loading}
+                                    disabled={loading || submitting}
                                 >
                                     Cancel
                                 </Button>
                             )}
                         </div>
                         {error && (
-                            <p className="text-red-500 text-sm mt-2">{error}</p>
+                            <p
+                                className="text-red-500 text-sm mt-2"
+                                aria-live="assertive"
+                                role="alert"
+                                aria-atomic="true"
+                            >
+                                {error}
+                            </p>
+                        )}
+                        {success && (
+                            <p
+                                className="text-green-500 text-sm mt-2"
+                                aria-live="polite"
+                                role="status"
+                                aria-atomic="true"
+                            >
+                                {success}
+                            </p>
                         )}
                     </form>
                 </CardContent>
