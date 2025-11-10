@@ -9,6 +9,8 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
