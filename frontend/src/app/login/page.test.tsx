@@ -82,6 +82,11 @@ describe("LoginPage", () => {
                 password: "password123",
             });
         });
+
+        // Verify navigation to dashboard after successful login
+        await waitFor(() => {
+            expect(mockPush).toHaveBeenCalledWith("/dashboard");
+        });
     });
 
     it("should display error on failed login", async () => {
