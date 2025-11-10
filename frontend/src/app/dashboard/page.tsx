@@ -176,23 +176,23 @@ export default function DashboardPage() {
 
     // Filter meetings by date
     const today = getLocalDateString();
-    const todayMeetings = dataToRender?.upcoming_meetings?.filter(
-        (meeting) => meeting.meeting_date === today
-    ) || [];
-    const futureMeetings = dataToRender?.upcoming_meetings?.filter(
-        (meeting) => meeting.meeting_date > today
-    ) || [];
+    const todayMeetings = (dataToRender?.upcoming_meetings || []).filter(
+        (meeting: any) => meeting.meeting_date === today
+    );
+    const futureMeetings = (dataToRender?.upcoming_meetings || []).filter(
+        (meeting: any) => meeting.meeting_date > today
+    );
 
     // Filter preps for the table sections
     // Upcoming preps: meeting date is today or in the future
-    const upcomingPreps = dataToRender?.recent_preps?.filter(
-        (prep) => prep.meeting_date && prep.meeting_date >= today
-    ) || [];
+    const upcomingPreps = (dataToRender?.recent_preps || []).filter(
+        (prep: any) => prep.meeting_date && prep.meeting_date >= today
+    );
 
     // Old preps: meeting date has passed (yesterday or earlier)
-    const oldPreps = dataToRender?.recent_preps?.filter(
-        (prep) => prep.meeting_date && prep.meeting_date < today
-    ) || [];
+    const oldPreps = (dataToRender?.recent_preps || []).filter(
+        (prep: any) => prep.meeting_date && prep.meeting_date < today
+    );
 
     if (isLoading) {
         return (
@@ -382,7 +382,7 @@ export default function DashboardPage() {
                         </span>
                     </div>
                     <div className="grid gap-4">
-                        {todayMeetings.map((meeting) => (
+                        {todayMeetings.map((meeting: any) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
@@ -429,7 +429,7 @@ export default function DashboardPage() {
                         Future meetings (next 7 days)
                     </p>
                     <div className="grid gap-4">
-                        {futureMeetings.map((meeting) => (
+                        {futureMeetings.map((meeting: any) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow"
@@ -506,7 +506,7 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {upcomingPreps.map((prep) => (
+                                        {upcomingPreps.map((prep: any) => (
                                             <tr
                                                 key={prep.id}
                                                 className="border-b hover:bg-neutral-800 transition-colors"
@@ -600,7 +600,7 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {oldPreps.map((prep) => (
+                                        {oldPreps.map((prep: any) => (
                                             <tr
                                                 key={prep.id}
                                                 className="border-b hover:bg-neutral-800 transition-colors"
