@@ -27,6 +27,7 @@ process.env.NEXT_PUBLIC_BACKEND_API_URL = "http://localhost:8000";
 describe("LoginPage", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.restoreAllMocks();
         (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
         (createClient as jest.Mock).mockReturnValue({
             auth: {
