@@ -36,6 +36,7 @@ describe("LoginPage", () => {
         });
         (useAuth as jest.Mock).mockReturnValue({
             session: null,
+            user: undefined,
             loading: false,
         });
     });
@@ -199,6 +200,7 @@ describe("LoginPage", () => {
     it("should show loading state while auth is loading", () => {
         (useAuth as jest.Mock).mockReturnValue({
             session: null,
+            user: undefined,
             loading: true,
         });
 
