@@ -110,7 +110,7 @@ $$;
 GRANT EXECUTE ON FUNCTION get_dashboard_data_aggregated(uuid) TO authenticated;
 
 -- Add comment for documentation
-COMMENT ON FUNCTION get_dashboard_data_aggregated IS
+COMMENT ON FUNCTION get_dashboard_data_aggregated(uuid) IS
 'Aggregated dashboard query that fetches all dashboard data in a single query.
  Combines queries using CTEs for 60-75% performance improvement.
  Returns JSON with total_preps, success_rate, avg_confidence, recent_preps, and upcoming_meetings.';
