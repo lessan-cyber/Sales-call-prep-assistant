@@ -167,6 +167,9 @@ export default function ProfilePage() {
             return;
         }
 
+        // Immediately disable form to prevent duplicate submissions
+        setSubmitting(true);
+
         // setLoading(true); // AuthProvider handles global loading
 
         try {
@@ -195,7 +198,6 @@ export default function ProfilePage() {
             }
 
             const data = await response.json();
-            setSubmitting(true);
             setSuccess("Profile saved successfully!");
 
             // Redirect to dashboard after short delay to show success message
