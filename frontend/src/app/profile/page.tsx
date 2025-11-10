@@ -77,7 +77,7 @@ export default function ProfilePage() {
                 }
             }
         }
-    }, [loading, profileLoading, session, user, router]);
+    }, [loading, profileLoading, session, user]);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
