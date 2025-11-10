@@ -160,8 +160,17 @@ export default function DashboardPage() {
         router.push(`/prep/${prepId}`);
     };
 
+    // Get local date in YYYY-MM-DD format (not UTC)
+    const getLocalDateString = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     // Filter meetings by date
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const today = getLocalDateString();
     const todayMeetings = dataToRender?.upcoming_meetings?.filter(
         (meeting) => meeting.meeting_date === today
     ) || [];
