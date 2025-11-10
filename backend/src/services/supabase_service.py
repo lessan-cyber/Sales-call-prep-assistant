@@ -533,7 +533,7 @@ class SupabaseService:
                     meeting_date,
                     created_at,
                     overall_confidence,
-                    meeting_outcomes!left(meeting_status)
+                    meeting_outcomes!prep_id(meeting_status, outcome)
                 """)
                 .eq("user_id", user_id)
                 .order("created_at", desc=True)
@@ -543,10 +543,11 @@ class SupabaseService:
 
             # Process the data to flatten outcome_status
             preps_data = response.data if response.data else []
+
             for prep in preps_data:
-                # Extract meeting_status from meeting_outcomes array (or null if no outcome)
-                if prep.get("meeting_outcomes") and len(prep["meeting_outcomes"]) > 0:
-                    prep["outcome_status"] = prep["meeting_outcomes"][0]["meeting_status"]
+                # Extract meeting_status from meeting_outcomes (it's a single object due to UNIQUE constraint)
+                if prep.get("meeting_outcomes"):
+                    prep["outcome_status"] = prep["meeting_outcomes"].get("meeting_status")
                 else:
                     prep["outcome_status"] = None
                 # Remove the nested meeting_outcomes field
@@ -611,6 +612,124 @@ class SupabaseService:
         except Exception as e:
             error(f"Unexpected error retrieving upcoming meetings: {e}")
             return []
+
+    async def get_dashboard_aggregated(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get all dashboard data in a single optimized query using CTEs.
+
+        This method combines:
+        - get_total_preps_count (1 query)
+        - get_success_metrics (2 queries)
+        - get_recent_preps (1 query)
+        - get_upcoming_meetings (1 query)
+
+        Total: 5 queries → 1 query (80% reduction in database round-trips)
+
+        Args:
+            user_id: UUID of the user
+
+        Returns:
+            Dictionary with all dashboard data
+        """
+        try:
+            # Use the new simplified RPC function
+            response = await self.supabase.rpc(
+                "get_dashboard_data_aggregated",
+                {"user_uuid": user_id}
+            ).execute()
+
+            # Check if the RPC function returns a dict directly or wrapped in a list
+            if response.data and isinstance(response.data, dict):
+                result = response.data
+            elif response.data and len(response.data) > 0:
+                result = response.data[0]
+            else:
+                return {
+                    "total_preps": 0,
+                    "success_rate": 0.0,
+                    "total_successful": 0,
+                    "total_completed": 0,
+                    "avg_confidence": 0.0,
+                    "time_saved_hours": 0.0,
+                    "time_saved_minutes": 0,
+                    "recent_preps": [],
+                    "upcoming_meetings": [],
+                }
+
+            # Calculate time saved (18 minutes per prep on average)
+            total_preps = result.get("total_preps", 0)
+            time_saved_minutes = total_preps * 18
+            time_saved_hours = round(time_saved_minutes / 60, 1)
+
+            recent_preps = result.get("recent_preps", [])
+            upcoming_meetings = result.get("upcoming_meetings", [])
+
+            # Build the dashboard response
+            dashboard_data = {
+                "total_preps": total_preps,
+                "success_rate": result.get("success_rate", 0.0),
+                "total_successful": result.get("total_successful", 0),
+                "total_completed": result.get("total_completed", 0),
+                "avg_confidence": result.get("avg_confidence", 0.0),
+                "time_saved_hours": time_saved_hours,
+                "time_saved_minutes": time_saved_minutes,
+                "recent_preps": recent_preps,
+                "upcoming_meetings": upcoming_meetings,
+            }
+
+            return dashboard_data
+
+        except PostgrestError as e:
+            error(f"Database error in aggregated dashboard query: {e}")
+            # Fallback to individual queries if aggregated query fails
+            return await self._get_dashboard_fallback(user_id)
+        except APIError as e:
+            error(f"API error in aggregated dashboard query: {e}")
+            return await self._get_dashboard_fallback(user_id)
+        except Exception as e:
+            error(f"Unexpected error in aggregated dashboard query: {e}")
+            return await self._get_dashboard_fallback(user_id)
+
+    async def _get_dashboard_fallback(self, user_id: str) -> Dict[str, Any]:
+        """
+        Fallback method that uses individual queries if aggregated query fails.
+        This ensures the dashboard still works even if the optimized query has issues.
+        """
+        try:
+            # Call individual methods (original implementation)
+            total_preps = await self.get_total_preps_count(user_id)
+            success_metrics = await self.get_success_metrics(user_id)
+            recent_preps = await self.get_recent_preps(user_id, limit=10)
+            upcoming_meetings = await self.get_upcoming_meetings(user_id, days_ahead=7)
+
+            # Calculate time saved
+            time_saved_minutes = total_preps * 18
+            time_saved_hours = round(time_saved_minutes / 60, 1)
+
+            return {
+                "total_preps": total_preps,
+                "success_rate": success_metrics["success_rate"],
+                "total_successful": success_metrics["total_successful"],
+                "total_completed": success_metrics["total_completed"],
+                "avg_confidence": success_metrics["avg_confidence"],
+                "time_saved_hours": time_saved_hours,
+                "time_saved_minutes": time_saved_minutes,
+                "recent_preps": recent_preps,
+                "upcoming_meetings": upcoming_meetings,
+            }
+        except Exception as e:
+            error(f"Fatal error in dashboard fallback: {e}")
+            return {
+                "total_preps": 0,
+                "success_rate": 0.0,
+                "total_successful": 0,
+                "total_completed": 0,
+                "avg_confidence": 0.0,
+                "time_saved_hours": 0.0,
+                "time_saved_minutes": 0,
+                "recent_preps": [],
+                "upcoming_meetings": [],
+            }
 
     async def get_user_preps_paginated(
         self,

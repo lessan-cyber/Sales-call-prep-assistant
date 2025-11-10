@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from supabase_auth.errors import AuthApiError
+from supabase_auth.errors import AuthApiError, AuthRetryableError
 from supabase_auth.types import User
 from supabase import AsyncClient
 
@@ -26,6 +26,13 @@ async def get_current_user(
     try:
         response = await supabase.auth.get_user(token)
         return response.user
+    except AuthRetryableError:
+        # Connection timeout or temporary auth service error
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service temporarily unavailable",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     except AuthApiError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

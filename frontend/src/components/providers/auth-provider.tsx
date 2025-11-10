@@ -11,6 +11,7 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   profileLoading: boolean;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -67,8 +69,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const logout = async () => {
+    try {
+      setLogoutLoading(true);
+      await supabase.auth.signOut();
+      setSession(null);
+      setUserProfile(null);
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect even if there's an error
+      router.push('/login');
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user: userProfile, loading, profileLoading }}>
+    <AuthContext.Provider value={{ session, user: userProfile, loading, profileLoading, logout }}>
       {children}
     </AuthContext.Provider>
   );

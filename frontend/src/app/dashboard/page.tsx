@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/client";
-import { error as loggerError } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useDashboard } from "@/hooks/useDashboard";
 
 // Zod schema for runtime validation of dashboard data
 const RecentPrepSchema = z.object({
@@ -130,105 +128,68 @@ function formatRelativeTime(dateString: string): string {
 
 export default function DashboardPage() {
     const router = useRouter();
-    const [dashboardData, setDashboardData] = useState<DashboardData | null>(
-        null,
-    );
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
 
-    useEffect(() => {
-        // Create AbortController for cleanup on unmount
-        const abortController = new AbortController();
+    // Use SWR hook for data fetching and caching
+    const { data: dashboardData, error, isLoading, isValidating, refresh } = useDashboard();
 
-        fetchDashboardData(abortController.signal);
+    // Validate the response data using Zod
+    const validationResult = dashboardData
+        ? DashboardDataSchema.safeParse(dashboardData)
+        : null;
 
-        // Cleanup function: abort the request if component unmounts
-        return () => {
-            abortController.abort();
-        };
-    }, []);
+    // Handle validation errors
+    if (validationResult && !validationResult.success) {
+        console.error(
+            "Dashboard data validation failed",
+            validationResult.error.format()
+        );
+    }
 
-    const fetchDashboardData = async (signal?: AbortSignal) => {
-        try {
-            setLoading(true);
-            const supabase = createClient();
-
-            // Get session
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
-            if (!session) {
-                router.push("/login");
-                return;
-            }
-
-            // Fetch dashboard data
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/dashboard`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${session?.access_token}`,
-                    },
-                    signal, // Pass the abort signal
-                },
-            );
-
-            if (!response.ok) {
-                throw new Error("Failed to fetch dashboard data");
-            }
-
-            const rawData = await response.json();
-
-            // Validate the response data using Zod
-            const validationResult = DashboardDataSchema.safeParse(rawData);
-
-            if (!validationResult.success) {
-                // Log the validation errors
-                loggerError(
-                    "Dashboard data validation failed",
-                    { validationErrors: validationResult.error.format() }
-                );
-                throw new Error(
-                    "Invalid dashboard data received from server",
-                );
-            }
-
-            // Validation successful, use the validated data
-            const validatedData = validationResult.data;
-
-            // Convert string dates to Date objects if needed for runtime processing
-            // Note: We keep them as strings since the UI components expect strings
-            // but the schema ensures they are valid date strings
-            setDashboardData(validatedData);
-        } catch (err) {
-            // Check if the request was aborted
-            if (err instanceof Error && err.name === "AbortError") {
-                // Request was aborted due to component unmount, silently return
-                return;
-            }
-
-            loggerError("Error fetching dashboard", { error: err });
-            setError(
-                err instanceof Error ? err.message : "Failed to load dashboard",
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Use validated data if validation succeeds, otherwise use raw data
+    const dataToRender = validationResult?.success ? validationResult.data : dashboardData;
 
     const handleCreateNewPrep = () => {
         router.push("/new-prep");
     };
 
     const handleRetry = () => {
-        fetchDashboardData();
+        refresh();
     };
 
     const handleViewPrep = (prepId: string) => {
         router.push(`/prep/${prepId}`);
     };
 
-    if (loading) {
+    // Get local date in YYYY-MM-DD format (not UTC)
+    const getLocalDateString = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Filter meetings by date
+    const today = getLocalDateString();
+    const todayMeetings = dataToRender?.upcoming_meetings?.filter(
+        (meeting) => meeting.meeting_date === today
+    ) || [];
+    const futureMeetings = dataToRender?.upcoming_meetings?.filter(
+        (meeting) => meeting.meeting_date > today
+    ) || [];
+
+    // Filter preps for the table sections
+    // Upcoming preps: meeting date is today or in the future
+    const upcomingPreps = dataToRender?.recent_preps?.filter(
+        (prep) => prep.meeting_date && prep.meeting_date >= today
+    ) || [];
+
+    // Old preps: meeting date has passed (yesterday or earlier)
+    const oldPreps = dataToRender?.recent_preps?.filter(
+        (prep) => prep.meeting_date && prep.meeting_date < today
+    ) || [];
+
+    if (isLoading) {
         return (
             <div className="container mx-auto px-4 py-8">
                 <div className="flex items-center justify-center min-h-[400px]">
@@ -244,7 +205,7 @@ export default function DashboardPage() {
                 <Card>
                     <CardContent className="pt-6">
                         <p className="text-red-600">{error}</p>
-                        <Button onClick={handleRetry} className="mt-4">
+                        <Button onClick={handleRetry} className="mt-4 cursor-pointer">
                             Retry
                         </Button>
                     </CardContent>
@@ -253,12 +214,12 @@ export default function DashboardPage() {
         );
     }
 
-    if (!dashboardData) {
+    if (!dataToRender) {
         return null;
     }
 
     // Empty state - no preps yet
-    if (dashboardData.total_preps === 0) {
+    if (dataToRender.total_preps === 0) {
         return (
             <div className="container mx-auto px-4 py-8">
                 <div className="max-w-2xl mx-auto text-center py-16">
@@ -269,7 +230,7 @@ export default function DashboardPage() {
                         Create your first sales prep to get started and see
                         insights here.
                     </p>
-                    <Button size="lg" onClick={handleCreateNewPrep}>
+                    <Button size="lg" onClick={handleCreateNewPrep} className="cursor-pointer">
                         Create Your First Prep
                     </Button>
                 </div>
@@ -282,9 +243,17 @@ export default function DashboardPage() {
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-                <p className="text-zinc-600">
-                    Track your sales prep performance and upcoming meetings.
-                </p>
+                <div className="flex items-center gap-2">
+                    <p className="text-zinc-600">
+                        Track your sales prep performance and upcoming meetings.
+                    </p>
+                    {isValidating && (
+                        <div className="flex items-center gap-2 text-sm text-zinc-500">
+                            <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+                            <span>Updating...</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Stats Overview - 4 Cards */}
@@ -297,7 +266,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold">
-                            {dashboardData.total_preps}
+                            {dataToRender.total_preps}
                         </div>
                         <p className="text-xs text-zinc-500 mt-1">
                             All time preps created
@@ -313,11 +282,11 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold">
-                            {dashboardData.success_rate}%
+                            {dataToRender.success_rate}%
                         </div>
                         <p className="text-xs text-zinc-500 mt-1">
-                            {dashboardData.total_successful} of{" "}
-                            {dashboardData.total_completed} meetings
+                            {dataToRender.total_successful} of{" "}
+                            {dataToRender.total_completed} meetings
                         </p>
                     </CardContent>
                 </Card>
@@ -331,15 +300,15 @@ export default function DashboardPage() {
                     <CardContent>
                         <div className="flex items-center gap-2">
                             <div className="text-3xl font-bold">
-                                {dashboardData.avg_confidence.toFixed(2)}
+                                {dataToRender.avg_confidence.toFixed(2)}
                             </div>
                             <Badge
                                 className={getConfidenceColor(
-                                    dashboardData.avg_confidence,
+                                    dataToRender.avg_confidence,
                                 )}
                             >
                                 {getConfidenceLabel(
-                                    dashboardData.avg_confidence,
+                                    dataToRender.avg_confidence,
                                 )}
                             </Badge>
                         </div>
@@ -357,23 +326,73 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold">
-                            {dashboardData.time_saved_hours}h
+                            {dataToRender.time_saved_hours}h
                         </div>
                         <p className="text-xs text-zinc-500 mt-1">
-                            ~{dashboardData.time_saved_minutes} minutes saved
+                            ~{dataToRender.time_saved_minutes} minutes saved
                         </p>
                     </CardContent>
                 </Card>
             </div>
 
+            {/* Today's Meetings Section */}
+            {todayMeetings.length > 0 && (
+                <div className="mb-8">
+                    <div className="flex items-center gap-2 mb-4">
+                        <h2 className="text-xl font-bold">Today</h2>
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            {todayMeetings.length} meeting{todayMeetings.length > 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    <div className="grid gap-4">
+                        {todayMeetings.map((meeting) => (
+                            <Card
+                                key={meeting.id}
+                                className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
+                            >
+                                <CardContent className="pt-6">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-lg">
+                                                {meeting.company_name}
+                                            </h3>
+                                            <p className="text-zinc-600 mt-1 line-clamp-2">
+                                                {meeting.meeting_objective}
+                                            </p>
+                                            <div className="mt-3 flex items-center gap-4 text-sm text-zinc-500">
+                                                <span>
+                                                    📅 Today • {new Date(meeting.meeting_date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            variant="default"
+                                            onClick={() =>
+                                                handleViewPrep(meeting.id)
+                                            }
+                                            className="cursor-pointer"
+                                        >
+                                            View Prep
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Upcoming Meetings Section */}
-            {dashboardData.upcoming_meetings.length > 0 && (
+            {futureMeetings.length > 0 && (
                 <div className="mb-8">
                     <h2 className="text-xl font-bold mb-4">
-                        Upcoming Meetings (Next 7 Days)
+                        Upcoming
                     </h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                        Future meetings (next 7 days)
+                    </p>
                     <div className="grid gap-4">
-                        {dashboardData.upcoming_meetings.map((meeting) => (
+                        {futureMeetings.map((meeting) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow"
@@ -401,6 +420,7 @@ export default function DashboardPage() {
                                             onClick={() =>
                                                 handleViewPrep(meeting.id)
                                             }
+                                            className="cursor-pointer"
                                         >
                                             View Prep
                                         </Button>
@@ -412,101 +432,196 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* Recent Preps Table */}
-            <div>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">Recent Preps</h2>
-                    <Button onClick={handleCreateNewPrep}>
-                        Create New Prep
-                    </Button>
-                </div>
+            {/* Upcoming Preps Table */}
+            {upcomingPreps.length > 0 && (
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold">Upcoming Preps</h2>
+                        <Button onClick={handleCreateNewPrep} className="cursor-pointer">
+                            Create New Prep
+                        </Button>
+                    </div>
 
-                <Card>
-                    <CardContent className="p-0">
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="border-b">
-                                    <tr>
-                                        <th className="text-left p-4 font-medium text-zinc-500">
-                                            Company
-                                        </th>
-                                        <th className="text-left p-4 font-medium text-zinc-500">
-                                            Objective
-                                        </th>
-                                        <th className="text-left p-4 font-medium text-zinc-500">
-                                            Created
-                                        </th>
-                                        <th className="text-left p-4 font-medium text-zinc-500">
-                                            Confidence
-                                        </th>
-                                        <th className="text-left p-4 font-medium text-zinc-500">
-                                            Status
-                                        </th>
-                                        <th className="text-left p-4 font-medium text-zinc-500">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {dashboardData.recent_preps.map((prep) => (
-                                        <tr
-                                            key={prep.id}
-                                            className="border-b hover:bg-neutral-800 transition-colors"
-                                        >
-                                            <td className="p-4 font-medium text-zinc-200">
-                                                {prep.company_name}
-                                            </td>
-                                            <td className="p-4">
-                                                <p className="max-w-md truncate text-zinc-200">
-                                                    {prep.meeting_objective}
-                                                </p>
-                                            </td>
-                                            <td className="p-4 text-zinc-500">
-                                                {formatRelativeTime(
-                                                    prep.created_at,
-                                                )}
-                                            </td>
-                                            <td className="p-4">
-                                                <Badge
-                                                    className={getConfidenceColor(
-                                                        prep.overall_confidence,
-                                                    )}
-                                                >
-                                                    {getConfidenceLabel(
-                                                        prep.overall_confidence,
-                                                    )}{" "}
-                                                    (
-                                                    {prep.overall_confidence.toFixed(
-                                                        2,
-                                                    )}
-                                                    )
-                                                </Badge>
-                                            </td>
-                                            <td className="p-4">
-                                                <Badge variant={getOutcomeBadgeVariant(prep.outcome_status)}>
-                                                    {getOutcomeBadgeLabel(prep.outcome_status)}
-                                                </Badge>
-                                            </td>
-                                            <td className="p-4">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        handleViewPrep(prep.id)
-                                                    }
-                                                    aria-label={`View prep for ${prep.company_name}`}
-                                                >
-                                                    View
-                                                </Button>
-                                            </td>
+                    <Card>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="border-b">
+                                        <tr>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Company
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Objective
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Meeting Date
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Confidence
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Status
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Actions
+                                            </th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                                    </thead>
+                                    <tbody>
+                                        {upcomingPreps.map((prep) => (
+                                            <tr
+                                                key={prep.id}
+                                                className="border-b hover:bg-neutral-800 transition-colors"
+                                            >
+                                                <td className="p-4 font-medium text-zinc-200">
+                                                    {prep.company_name}
+                                                </td>
+                                                <td className="p-4">
+                                                    <p className="max-w-md truncate text-zinc-200">
+                                                        {prep.meeting_objective}
+                                                    </p>
+                                                </td>
+                                                <td className="p-4 text-zinc-500">
+                                                    {formatDate(prep.meeting_date)}
+                                                </td>
+                                                <td className="p-4">
+                                                    <Badge
+                                                        className={getConfidenceColor(
+                                                            prep.overall_confidence,
+                                                        )}
+                                                    >
+                                                        {getConfidenceLabel(
+                                                            prep.overall_confidence,
+                                                        )}{" "}
+                                                        (
+                                                        {prep.overall_confidence.toFixed(
+                                                            2,
+                                                        )}
+                                                        )
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-4">
+                                                    <Badge variant={getOutcomeBadgeVariant(prep.outcome_status)}>
+                                                        {getOutcomeBadgeLabel(prep.outcome_status)}
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-4">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            handleViewPrep(prep.id)
+                                                        }
+                                                        aria-label={`View prep for ${prep.company_name}`}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        View
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Old Preps Table */}
+            {oldPreps.length > 0 && (
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold">Old Preps</h2>
+                    </div>
+
+                    <Card>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="border-b">
+                                        <tr>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Company
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Objective
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Meeting Date
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Confidence
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Status
+                                            </th>
+                                            <th className="text-left p-4 font-medium text-zinc-500">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {oldPreps.map((prep) => (
+                                            <tr
+                                                key={prep.id}
+                                                className="border-b hover:bg-neutral-800 transition-colors"
+                                            >
+                                                <td className="p-4 font-medium text-zinc-200">
+                                                    {prep.company_name}
+                                                </td>
+                                                <td className="p-4">
+                                                    <p className="max-w-md truncate text-zinc-200">
+                                                        {prep.meeting_objective}
+                                                    </p>
+                                                </td>
+                                                <td className="p-4 text-zinc-500">
+                                                    {formatDate(prep.meeting_date)}
+                                                </td>
+                                                <td className="p-4">
+                                                    <Badge
+                                                        className={getConfidenceColor(
+                                                            prep.overall_confidence,
+                                                        )}
+                                                    >
+                                                        {getConfidenceLabel(
+                                                            prep.overall_confidence,
+                                                        )}{" "}
+                                                        (
+                                                        {prep.overall_confidence.toFixed(
+                                                            2,
+                                                        )}
+                                                        )
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-4">
+                                                    <Badge variant={getOutcomeBadgeVariant(prep.outcome_status)}>
+                                                        {getOutcomeBadgeLabel(prep.outcome_status)}
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-4">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            handleViewPrep(prep.id)
+                                                        }
+                                                        aria-label={`View prep for ${prep.company_name}`}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        View
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }
