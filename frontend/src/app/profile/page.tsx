@@ -190,8 +190,10 @@ export default function ProfilePage() {
             setTimeout(() => {
                 router.push("/dashboard");
             }, 1500);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            // Safe error handling: narrow unknown to Error or convert to string
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            setError(errorMessage);
         } finally {
             // setLoading(false); // AuthProvider handles global loading
         }
