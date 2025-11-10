@@ -2,14 +2,14 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from supabase_auth.types import User
 
 from supabase import AsyncClient
 
 from ..dependencies import get_current_user, get_supabase_client
 from ..services.supabase_service import get_supabase_service
-from ..utils.logger import info
+from ..utils.logger import info, error
 
 router = APIRouter()
 
