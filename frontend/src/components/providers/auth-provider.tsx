@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Session } from '@supabase/supabase-js';
 
@@ -85,8 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const value = useMemo(() => {
+        return { session, user: userProfile, loading, profileLoading, logout };
+    }, [userProfile, loading, profileLoading, session, logout]);
+
   return (
-    <AuthContext.Provider value={{ session, user: userProfile, loading, profileLoading, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
