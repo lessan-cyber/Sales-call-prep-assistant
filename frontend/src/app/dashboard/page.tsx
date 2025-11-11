@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { z } from "zod";
+import { UpcomingPrep, UpcomingMeeting, DashboardDataSchema } from "@/types/prep_dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,42 +14,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-// Zod schema for runtime validation of dashboard data
-const RecentPrepSchema = z.object({
-    id: z.string(),
-    company_name: z.string(),
-    meeting_objective: z.string(),
-    meeting_date: z.string().nullable(),
-    created_at: z.string(),
-    overall_confidence: z.number(),
-    outcome_status: z.enum(["completed", "cancelled", "rescheduled"]).nullable(),
-});
-
-type UpcomingPrep = z.infer<typeof RecentPrepSchema>;
-
-const UpcomingMeetingSchema = z.object({
-    id: z.string(),
-    company_name: z.string(),
-    meeting_objective: z.string(),
-    meeting_date: z.string(),
-});
-
-type UpcomingMeeting = z.infer<typeof UpcomingMeetingSchema>;
-
-const DashboardDataSchema = z.object({
-    total_preps: z.number(),
-    success_rate: z.number(),
-    total_successful: z.number(),
-    total_completed: z.number(),
-    avg_confidence: z.number(),
-    time_saved_hours: z.number(),
-    time_saved_minutes: z.number(),
-    recent_preps: z.array(RecentPrepSchema),
-    upcoming_meetings: z.array(UpcomingMeetingSchema),
-});
-
-// TypeScript type inferred from Zod schema for type safety
-type DashboardData = z.infer<typeof DashboardDataSchema>;
 
 // Confidence score thresholds for UI classification
 const CONFIDENCE_HIGH = 0.8;
@@ -258,7 +222,7 @@ export default function DashboardPage() {
                     <h1 className="text-4xl font-bold mb-4">
                         Welcome to Your Dashboard
                     </h1>
-                    <p className="text-xl text-zinc-600 mb-8">
+                    <p className="text-xl text-muted-foreground mb-8">
                         Create your first sales prep to get started and see
                         insights here.
                     </p>
@@ -276,7 +240,7 @@ export default function DashboardPage() {
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
                 <div className="flex items-center gap-2">
-                    <p className="text-zinc-600">
+                    <p className="text-muted-foreground/70">
                         Track your sales prep performance and upcoming meetings.
                     </p>
                     {isValidating && (
@@ -326,7 +290,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-600">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Total Preps
                         </CardTitle>
                     </CardHeader>
@@ -342,7 +306,7 @@ export default function DashboardPage() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-600">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Success Rate
                         </CardTitle>
                     </CardHeader>
@@ -359,7 +323,7 @@ export default function DashboardPage() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-600">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Avg Confidence
                         </CardTitle>
                     </CardHeader>
@@ -386,7 +350,7 @@ export default function DashboardPage() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-600">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Est. Time Saved
                         </CardTitle>
                     </CardHeader>

@@ -204,7 +204,15 @@ export default function NewPrepPage() {
                     type="date"
                     value={formData.meeting_date}
                     onChange={handleChange}
+                    placeholder={`${new Date().toISOString().split("T")[0]}`}
                     disabled={loading}
+                    className="
+                              bg-zinc-900 border border-zinc-700 text-zinc-200 
+                              focus:border-blue-500 focus:ring-blue-500
+                              [&::-webkit-calendar-picker-indicator]:invert
+                              [&::-webkit-calendar-picker-indicator]:opacity-80
+                              [&::-webkit-calendar-picker-indicator]:cursor-pointer
+                            "
                   />
                 </div>
               </div>
