@@ -1,249 +1,263 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { error as loggerError } from "@/lib/logger";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function NewPrepPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const router = useRouter();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
 
-  const [formData, setFormData] = useState({
-    company_name: "",
-    meeting_objective: "",
-    contact_person_name: "",
-    contact_linkedin_url: "",
-    meeting_date: "",
-  });
+    const [formData, setFormData] = useState({
+        company_name: "",
+        meeting_objective: "",
+        contact_person_name: "",
+        contact_linkedin_url: "",
+        meeting_date: "",
+    });
 
-  // Check authentication on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+    // Protect route: require authentication and profile
+    const { loading, isAuthenticated } = useRequireAuth({
+        requireProfile: true,
+    });
 
-        if (!session) {
-          router.push("/login");
-          return;
-        }
+    // Render loading state while checking authentication
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 py-8 max-w-2xl">
+                <Card>
+                    <CardContent className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                            <p className="mt-4 text-sm text-gray-600">
+                                Loading...
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
-        setIsAuthenticated(true);
-      } catch (err: unknown) {
-        loggerError("Authentication check failed", { error: err });
-        router.push("/login");
-      } finally {
-        setIsLoading(false);
-      }
+    // Don't render form if not authenticated
+    if (!isAuthenticated) {
+        return null;
+    }
+
+    const handleChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    ) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
     };
 
-    checkAuth();
-  }, [router]);
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError("");
 
-  // Render loading state while checking authentication
-  if (isLoading) {
+        try {
+            const supabase = createClient();
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
+
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/preps`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${session?.access_token}`,
+                    },
+                    body: JSON.stringify(formData),
+                },
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || "Failed to create prep");
+            }
+
+            if (!data.prep_id) {
+                throw new Error("No prep_id received from server");
+            }
+
+            router.push(`/prep/${data.prep_id}`);
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("An unknown error occurred");
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-4 text-sm text-gray-600">Loading...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Create New Sales Prep</CardTitle>
+                    <CardDescription>
+                        Generate a comprehensive sales prep report to prepare
+                        for your call.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Required Fields */}
+                        <div className="space-y-4">
+                            <div>
+                                <Label
+                                    htmlFor="company_name"
+                                    className="mb-2 block"
+                                >
+                                    Company Name *
+                                </Label>
+                                <Input
+                                    id="company_name"
+                                    name="company_name"
+                                    value={formData.company_name}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="e.g., Acme Corporation"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <div>
+                                <Label
+                                    htmlFor="meeting_objective"
+                                    className="mb-2 block"
+                                >
+                                    Meeting Objective *
+                                </Label>
+                                <Textarea
+                                    id="meeting_objective"
+                                    name="meeting_objective"
+                                    value={formData.meeting_objective}
+                                    onChange={handleChange}
+                                    required
+                                    rows={4}
+                                    placeholder="Describe the purpose of this sales call..."
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Optional Fields - Expandable Section */}
+                        <div className="space-y-4 border-t pt-4">
+                            <h3 className="text-lg font-medium">
+                                Additional Details (Optional)
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                                Providing contact information improves research
+                                quality
+                            </p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <Label
+                                        htmlFor="contact_person_name"
+                                        className="mb-2 block"
+                                    >
+                                        Contact Person Name
+                                    </Label>
+                                    <Input
+                                        id="contact_person_name"
+                                        name="contact_person_name"
+                                        value={formData.contact_person_name}
+                                        onChange={handleChange}
+                                        placeholder="e.g., Jane Smith"
+                                        disabled={isSubmitting}
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label
+                                        htmlFor="contact_linkedin_url"
+                                        className="mb-2 block"
+                                    >
+                                        Contact LinkedIn URL
+                                    </Label>
+                                    <Input
+                                        id="contact_linkedin_url"
+                                        name="contact_linkedin_url"
+                                        type="url"
+                                        value={formData.contact_linkedin_url}
+                                        onChange={handleChange}
+                                        placeholder="https://linkedin.com/in/jane-smith"
+                                        disabled={isSubmitting}
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label
+                                        htmlFor="meeting_date"
+                                        className="mb-2 block"
+                                    >
+                                        Meeting Date
+                                    </Label>
+                                    <Input
+                                        id="meeting_date"
+                                        name="meeting_date"
+                                        type="date"
+                                        value={formData.meeting_date}
+                                        onChange={handleChange}
+                                        disabled={isSubmitting}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {error && (
+                            <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="flex gap-4">
+                            <Button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="flex-1"
+                            >
+                                {isSubmitting
+                                    ? "Generating..."
+                                    : "Generate Prep Report"}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => router.push("/")}
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
+        </div>
     );
-  }
-
-  // Don't render form if not authenticated
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/preps`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Failed to create prep");
-      }
-
-      if (!data.prep_id) {
-        throw new Error("No prep_id received from server");
-      }
-
-      router.push(`/prep/${data.prep_id}`);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create New Sales Prep</CardTitle>
-          <CardDescription>
-            Generate a comprehensive sales prep report to prepare for your call.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Required Fields */}
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="company_name" className="mb-2 block">Company Name *</Label>
-                <Input
-                  id="company_name"
-                  name="company_name"
-                  value={formData.company_name}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g., Acme Corporation"
-                  disabled={loading}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="meeting_objective" className="mb-2 block">Meeting Objective *</Label>
-                <Textarea
-                  id="meeting_objective"
-                  name="meeting_objective"
-                  value={formData.meeting_objective}
-                  onChange={handleChange}
-                  required
-                  rows={4}
-                  placeholder="Describe the purpose of this sales call..."
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            {/* Optional Fields - Expandable Section */}
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="text-lg font-medium">Additional Details (Optional)</h3>
-              <p className="text-sm text-gray-600">
-                Providing contact information improves research quality
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="contact_person_name" className="mb-2 block">Contact Person Name</Label>
-                  <Input
-                    id="contact_person_name"
-                    name="contact_person_name"
-                    value={formData.contact_person_name}
-                    onChange={handleChange}
-                    placeholder="e.g., Jane Smith"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="contact_linkedin_url" className="mb-2 block">Contact LinkedIn URL</Label>
-                  <Input
-                    id="contact_linkedin_url"
-                    name="contact_linkedin_url"
-                    type="url"
-                    value={formData.contact_linkedin_url}
-                    onChange={handleChange}
-                    placeholder="https://linkedin.com/in/jane-smith"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="meeting_date" className="mb-2 block">Meeting Date</Label>
-                  <Input
-                    id="meeting_date"
-                    name="meeting_date"
-                    type="date"
-                    value={formData.meeting_date}
-                    onChange={handleChange}
-                    placeholder={`${new Date().toISOString().split("T")[0]}`}
-                    disabled={loading}
-                    className="
-                              bg-zinc-900 border border-zinc-700 text-zinc-200 
-                              focus:border-blue-500 focus:ring-blue-500
-                              [&::-webkit-calendar-picker-indicator]:invert
-                              [&::-webkit-calendar-picker-indicator]:opacity-80
-                              [&::-webkit-calendar-picker-indicator]:cursor-pointer
-                            "
-                  />
-                </div>
-              </div>
-            </div>
-
-            {error && (
-              <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
-                {error}
-              </div>
-            )}
-
-            <div className="flex gap-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="flex-1"
-              >
-                {loading ? "Generating..." : "Generate Prep Report"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/")}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
 }

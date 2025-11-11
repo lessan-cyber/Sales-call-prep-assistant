@@ -2,18 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { UpcomingPrep, UpcomingMeeting, DashboardDataSchema } from "@/types/prep_dashboard";
+import {
+    UpcomingPrep,
+    UpcomingMeeting,
+    DashboardDataSchema,
+} from "@/types/prep_dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "@/hooks/useDashboard";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 // Confidence score thresholds for UI classification
 const CONFIDENCE_HIGH = 0.8;
@@ -120,8 +118,17 @@ function formatRelativeTime(dateString: string): string {
 export default function DashboardPage() {
     const router = useRouter();
 
+    // Protect route: require authentication and profile
+    useRequireAuth({ requireProfile: true });
+
     // Use SWR hook for data fetching and caching
-    const { data: dashboardData, error, isLoading, isValidating, refresh } = useDashboard();
+    const {
+        data: dashboardData,
+        error,
+        isLoading,
+        isValidating,
+        refresh,
+    } = useDashboard();
 
     // Validate the response data using Zod
     const validationResult = dashboardData
@@ -136,13 +143,15 @@ export default function DashboardPage() {
         if (validationError) {
             console.error(
                 "Dashboard data validation failed",
-                validationResult?.error.format()
+                validationResult?.error.format(),
             );
         }
     }, [validationError, validationResult?.error]);
 
     // Use validated data if validation succeeds, otherwise use raw data
-    const dataToRender = validationResult?.success ? validationResult.data : dashboardData;
+    const dataToRender = validationResult?.success
+        ? validationResult.data
+        : dashboardData;
 
     const handleCreateNewPrep = () => {
         router.push("/new-prep");
@@ -160,29 +169,29 @@ export default function DashboardPage() {
     const getLocalDateString = () => {
         const now = new Date();
         const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
     };
 
     // Filter meetings by date
     const today = getLocalDateString();
     const todayMeetings = (dataToRender?.upcoming_meetings || []).filter(
-        (meeting: UpcomingMeeting) => meeting.meeting_date === today
+        (meeting: UpcomingMeeting) => meeting.meeting_date === today,
     );
     const futureMeetings = (dataToRender?.upcoming_meetings || []).filter(
-        (meeting: UpcomingMeeting) => meeting.meeting_date > today
+        (meeting: UpcomingMeeting) => meeting.meeting_date > today,
     );
 
     // Filter preps for the table sections
     // Upcoming preps: meeting date is today or in the future
     const upcomingPreps = (dataToRender?.recent_preps || []).filter(
-        (prep: UpcomingPrep) => prep.meeting_date && prep.meeting_date >= today
+        (prep: UpcomingPrep) => prep.meeting_date && prep.meeting_date >= today,
     );
 
     // Old preps: meeting date has passed (yesterday or earlier)
     const oldPreps = (dataToRender?.recent_preps || []).filter(
-        (prep: UpcomingPrep) => prep.meeting_date && prep.meeting_date < today
+        (prep: UpcomingPrep) => prep.meeting_date && prep.meeting_date < today,
     );
 
     if (isLoading) {
@@ -201,7 +210,10 @@ export default function DashboardPage() {
                 <Card>
                     <CardContent className="pt-6">
                         <p className="text-red-600">{error}</p>
-                        <Button onClick={handleRetry} className="mt-4 cursor-pointer">
+                        <Button
+                            onClick={handleRetry}
+                            className="mt-4 cursor-pointer"
+                        >
                             Retry
                         </Button>
                     </CardContent>
@@ -226,7 +238,11 @@ export default function DashboardPage() {
                         Create your first sales prep to get started and see
                         insights here.
                     </p>
-                    <Button size="lg" onClick={handleCreateNewPrep} className="cursor-pointer">
+                    <Button
+                        size="lg"
+                        onClick={handleCreateNewPrep}
+                        className="cursor-pointer"
+                    >
                         Create Your First Prep
                     </Button>
                 </div>
@@ -277,8 +293,9 @@ export default function DashboardPage() {
                             </h3>
                             <div className="mt-1 text-sm text-yellow-700">
                                 <p>
-                                    Some dashboard data may be incomplete or malformed. Displaying fallback
-                                    data. Please refresh if you notice any issues.
+                                    Some dashboard data may be incomplete or
+                                    malformed. Displaying fallback data. Please
+                                    refresh if you notice any issues.
                                 </p>
                             </div>
                         </div>
@@ -371,7 +388,8 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 mb-4">
                         <h2 className="text-xl font-bold">Today</h2>
                         <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                            {todayMeetings.length} meeting{todayMeetings.length > 1 ? 's' : ''}
+                            {todayMeetings.length} meeting
+                            {todayMeetings.length > 1 ? "s" : ""}
                         </span>
                     </div>
                     <div className="grid gap-4">
@@ -391,7 +409,10 @@ export default function DashboardPage() {
                                             </p>
                                             <div className="mt-3 flex items-center gap-4 text-sm text-zinc-500">
                                                 <span>
-                                                    📅 {formatDateWithWeekday(meeting.meeting_date)}
+                                                    📅{" "}
+                                                    {formatDateWithWeekday(
+                                                        meeting.meeting_date,
+                                                    )}
                                                 </span>
                                             </div>
                                         </div>
@@ -415,9 +436,7 @@ export default function DashboardPage() {
             {/* Upcoming Meetings Section */}
             {futureMeetings.length > 0 && (
                 <div className="mb-8">
-                    <h2 className="text-xl font-bold mb-4">
-                        Upcoming
-                    </h2>
+                    <h2 className="text-xl font-bold mb-4">Upcoming</h2>
                     <p className="text-sm text-zinc-500 mb-4">
                         Future meetings (next 7 days)
                     </p>
@@ -467,7 +486,10 @@ export default function DashboardPage() {
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-bold">Upcoming Preps</h2>
-                        <Button onClick={handleCreateNewPrep} className="cursor-pointer">
+                        <Button
+                            onClick={handleCreateNewPrep}
+                            className="cursor-pointer"
+                        >
                             Create New Prep
                         </Button>
                     </div>
@@ -499,67 +521,90 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {upcomingPreps.map((prep: UpcomingPrep) => (
-                                            <tr
-                                                key={prep.id}
-                                                className="border-b hover:bg-neutral-800 transition-colors"
-                                            >
-                                                <td className="p-4 font-medium text-zinc-200">
-                                                    {prep.company_name}
-                                                </td>
-                                                <td className="p-4">
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                            <p className="max-w-md truncate text-zinc-200 cursor-help">
-                                                                {prep.meeting_objective}
-                                                            </p>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top" className="max-w-xs">
-                                                            {prep.meeting_objective}
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                </td>
-                                                <td className="p-4 text-zinc-500">
-                                                    {prep.meeting_date ? formatDate(prep.meeting_date) : "No date"}
-                                                </td>
-                                                <td className="p-4">
-                                                    <Badge
-                                                        className={getConfidenceColor(
-                                                            prep.overall_confidence,
-                                                        )}
-                                                    >
-                                                        {getConfidenceLabel(
-                                                            prep.overall_confidence,
-                                                        )}{" "}
-                                                        (
-                                                        {prep.overall_confidence.toFixed(
-                                                            2,
-                                                        )}
-                                                        )
-                                                    </Badge>
-                                                </td>
-                                                <td className="p-4">
-                                                    <Badge variant={getOutcomeBadgeVariant(prep.outcome_status)}>
-                                                        {getOutcomeBadgeLabel(prep.outcome_status)}
-                                                    </Badge>
-                                                </td>
-                                                <td className="p-4">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            handleViewPrep(prep.id)
-                                                        }
-                                                        aria-label={`View prep for ${prep.company_name}`}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        View
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {upcomingPreps.map(
+                                            (prep: UpcomingPrep) => (
+                                                <tr
+                                                    key={prep.id}
+                                                    className="border-b hover:bg-neutral-800 transition-colors"
+                                                >
+                                                    <td className="p-4 font-medium text-zinc-200">
+                                                        {prep.company_name}
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger
+                                                                    asChild
+                                                                >
+                                                                    <p className="max-w-md truncate text-zinc-200 cursor-help">
+                                                                        {
+                                                                            prep.meeting_objective
+                                                                        }
+                                                                    </p>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent
+                                                                    side="top"
+                                                                    className="max-w-xs"
+                                                                >
+                                                                    {
+                                                                        prep.meeting_objective
+                                                                    }
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </td>
+                                                    <td className="p-4 text-zinc-500">
+                                                        {prep.meeting_date
+                                                            ? formatDate(
+                                                                  prep.meeting_date,
+                                                              )
+                                                            : "No date"}
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <Badge
+                                                            className={getConfidenceColor(
+                                                                prep.overall_confidence,
+                                                            )}
+                                                        >
+                                                            {getConfidenceLabel(
+                                                                prep.overall_confidence,
+                                                            )}{" "}
+                                                            (
+                                                            {prep.overall_confidence.toFixed(
+                                                                2,
+                                                            )}
+                                                            )
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <Badge
+                                                            variant={getOutcomeBadgeVariant(
+                                                                prep.outcome_status,
+                                                            )}
+                                                        >
+                                                            {getOutcomeBadgeLabel(
+                                                                prep.outcome_status,
+                                                            )}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                handleViewPrep(
+                                                                    prep.id,
+                                                                )
+                                                            }
+                                                            aria-label={`View prep for ${prep.company_name}`}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            View
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ),
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -616,7 +661,11 @@ export default function DashboardPage() {
                                                     </p>
                                                 </td>
                                                 <td className="p-4 text-zinc-500">
-                                                    {prep.meeting_date ? formatDate(prep.meeting_date) : "No date"}
+                                                    {prep.meeting_date
+                                                        ? formatDate(
+                                                              prep.meeting_date,
+                                                          )
+                                                        : "No date"}
                                                 </td>
                                                 <td className="p-4">
                                                     <Badge
@@ -635,8 +684,14 @@ export default function DashboardPage() {
                                                     </Badge>
                                                 </td>
                                                 <td className="p-4">
-                                                    <Badge variant={getOutcomeBadgeVariant(prep.outcome_status)}>
-                                                        {getOutcomeBadgeLabel(prep.outcome_status)}
+                                                    <Badge
+                                                        variant={getOutcomeBadgeVariant(
+                                                            prep.outcome_status,
+                                                        )}
+                                                    >
+                                                        {getOutcomeBadgeLabel(
+                                                            prep.outcome_status,
+                                                        )}
                                                     </Badge>
                                                 </td>
                                                 <td className="p-4">
@@ -644,7 +699,9 @@ export default function DashboardPage() {
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() =>
-                                                            handleViewPrep(prep.id)
+                                                            handleViewPrep(
+                                                                prep.id,
+                                                            )
                                                         }
                                                         aria-label={`View prep for ${prep.company_name}`}
                                                         className="cursor-pointer"

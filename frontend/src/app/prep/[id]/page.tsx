@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { exportPrepToPDF } from "@/utils/exportToPDF";
 import { RecordOutcome } from "@/components/RecordOutcome";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 interface PrepData {
     executive_summary: {
@@ -100,6 +101,9 @@ export default function PrepDetailPage({
     const [error, setError] = useState("");
     const [pdfLoading, setPdfLoading] = useState(false);
     const [outcomeModalOpen, setOutcomeModalOpen] = useState(false);
+
+    // Protect route: require authentication and profile
+    useRequireAuth({ requireProfile: true });
 
     // Handle PDF export
     const handleExportPDF = async () => {

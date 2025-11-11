@@ -1,35 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function Home() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkAuthAndRedirect = async () => {
-      try {
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session) {
-          // User is authenticated, redirect to dashboard
-          router.push("/dashboard");
-          return;
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error checking auth:", error);
-        setLoading(false);
-      }
-    };
-
-    checkAuthAndRedirect();
-  }, [router]);
+  // Use the requireAuth hook for homepage logic:
+  // - If authenticated with profile → redirect to dashboard
+  // - If authenticated without profile → redirect to profile
+  // - If not authenticated → stay on homepage
+  const { loading } = useRequireAuth();
 
   if (loading) {
     return (

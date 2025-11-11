@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Edit2, Mail, Building2, Tag, X } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { LogOut } from "lucide-react";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const MIN_PORTFOLIO_ITEMS = 5;
 const MAX_PORTFOLIO_ITEMS = 20;
@@ -46,12 +47,13 @@ export default function ProfilePage() {
     // Debug: Log state changes for clignotement issues
     //console.log({ loading, profileLoading, session, user, isFormInitialized: isFormInitialized.current });
 
+    // Protect route: require authentication (profile optional for this page)
+    useRequireAuth({ requireProfile: false });
+
     useEffect(() => {
         // Wait for both auth loading and profile loading to complete
         if (!loading && !profileLoading) {
-            if (!session) {
-                router.push("/login");
-            } else if (user) {
+            if (user) {
                 // If form is not initialized, populate with user data
                 if (!isFormInitialized.current) {
                     setFormState(user);

@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { info, error } from '@/lib/logger';
+import { useRedirectAuthenticated } from '@/hooks/useRequireAuth';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,29 +20,23 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const { session, user, loading: authLoading } = useAuth();
 
+  // Redirect authenticated users to dashboard
+  const { loading: redirectLoading } = useRedirectAuthenticated();
+
+  // Get returnTo parameter for post-login redirect
+  const returnTo = searchParams.get('returnTo') || '/dashboard';
+
   useEffect(() => {
     info("LoginPage mounted.");
-    // Only redirect if both session and user are available
-    if (session && user !== undefined) {
-      // Check if user has a profile
-      // If user exists (has profile), redirect to dashboard
-      // If user is null (no profile), redirect to profile
-      const destination = user ? '/dashboard' : '/profile';
-      info(`User already logged in, redirecting to ${destination}`);
-      router.push(destination);
-    }
-  }, [session, user, router]);
+  }, []);
 
-  // Render nothing if already logged in or auth state is loading
-  if (authLoading) {
+  // Render loading state while checking auth
+  if (authLoading || redirectLoading) {
     return <div className="flex min-h-screen items-center justify-center"><p>Loading authentication state...</p></div>;
-  }
-
-  if (session) {
-    return null; // Already redirected by useEffect
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -64,7 +60,8 @@ export default function LoginPage() {
             Authorization: `Bearer ${data.session.access_token}`,
           },
         });
-        const destination = response.ok ? '/dashboard' : '/profile';
+        // Use returnTo if specified, otherwise determine based on profile status
+        const destination = response.ok ? returnTo : '/profile';
         info(`Login successful, redirecting to ${destination}`);
         router.push(destination);
       } catch (err) {

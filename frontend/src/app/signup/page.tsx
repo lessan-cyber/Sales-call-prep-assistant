@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useRedirectAuthenticated } from '@/hooks/useRequireAuth';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,21 +20,14 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
-  const { session, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
 
-  useEffect(() => {
-    if (session) {
-      router.push('/profile'); // Redirect to profile page
-    }
-  }, [session, router]);
+  // Redirect authenticated users to profile
+  const { loading: redirectLoading } = useRedirectAuthenticated();
 
-  // Render nothing if already logged in or auth state is loading
-  if (authLoading) {
+  // Render loading state while checking auth
+  if (authLoading || redirectLoading) {
     return <div className="flex min-h-screen items-center justify-center"><p>Loading authentication state...</p></div>;
-  }
-
-  if (session) {
-    return null; // Already redirected by useEffect
   }
 
   const handleSignup = async (e: React.FormEvent) => {
