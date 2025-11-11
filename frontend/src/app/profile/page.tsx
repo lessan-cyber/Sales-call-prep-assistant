@@ -43,6 +43,8 @@ export default function ProfilePage() {
     const [submitting, setSubmitting] = useState(false);
     const isFormInitialized = useRef(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Debug: Log state changes for clignotement issues
+    //console.log({ loading, profileLoading, session, user, isFormInitialized: isFormInitialized.current });
 
     useEffect(() => {
         // Wait for both auth loading and profile loading to complete
@@ -89,7 +91,7 @@ export default function ProfilePage() {
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, []);
+    }, []);//verify
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -167,6 +169,9 @@ export default function ProfilePage() {
             return;
         }
 
+        // Immediately disable form to prevent duplicate submissions
+        setSubmitting(true);
+
         // setLoading(true); // AuthProvider handles global loading
 
         try {
@@ -195,7 +200,6 @@ export default function ProfilePage() {
             }
 
             const data = await response.json();
-            setSubmitting(true);
             setSuccess("Profile saved successfully!");
 
             // Redirect to dashboard after short delay to show success message

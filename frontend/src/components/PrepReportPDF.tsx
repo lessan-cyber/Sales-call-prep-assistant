@@ -343,7 +343,7 @@ export const PrepReportPDF: React.FC<PrepReportPDFProps> = ({
 
           {prepData.strategic_narrative.pain_points.length > 0 && (
             <>
-              <Text style={styles.subsectionTitle}>Pain Points We're Solving</Text>
+              <Text style={styles.subsectionTitle}>Pain Points We&apos;re Solving</Text>
               {prepData.strategic_narrative.pain_points.map((pain, idx) => (
                 <View key={idx} style={styles.painPoint}>
                   <Text style={styles.painTitle}>{pain.pain}</Text>

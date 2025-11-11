@@ -2,44 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { z } from "zod";
+import { UpcomingPrep, UpcomingMeeting, DashboardDataSchema } from "@/types/prep_dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "@/hooks/useDashboard";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
-// Zod schema for runtime validation of dashboard data
-const RecentPrepSchema = z.object({
-    id: z.string(),
-    company_name: z.string(),
-    meeting_objective: z.string(),
-    meeting_date: z.string().nullable(),
-    created_at: z.string(),
-    overall_confidence: z.number(),
-    outcome_status: z.enum(["completed", "cancelled", "rescheduled"]).nullable(),
-});
-
-const UpcomingMeetingSchema = z.object({
-    id: z.string(),
-    company_name: z.string(),
-    meeting_objective: z.string(),
-    meeting_date: z.string(),
-});
-
-const DashboardDataSchema = z.object({
-    total_preps: z.number(),
-    success_rate: z.number(),
-    total_successful: z.number(),
-    total_completed: z.number(),
-    avg_confidence: z.number(),
-    time_saved_hours: z.number(),
-    time_saved_minutes: z.number(),
-    recent_preps: z.array(RecentPrepSchema),
-    upcoming_meetings: z.array(UpcomingMeetingSchema),
-});
-
-// TypeScript type inferred from Zod schema for type safety
-type DashboardData = z.infer<typeof DashboardDataSchema>;
 
 // Confidence score thresholds for UI classification
 const CONFIDENCE_HIGH = 0.8;
@@ -145,7 +119,6 @@ function formatRelativeTime(dateString: string): string {
 
 export default function DashboardPage() {
     const router = useRouter();
-    const [validationError, setValidationError] = useState(false);
 
     // Use SWR hook for data fetching and caching
     const { data: dashboardData, error, isLoading, isValidating, refresh } = useDashboard();
@@ -155,18 +128,18 @@ export default function DashboardPage() {
         ? DashboardDataSchema.safeParse(dashboardData)
         : null;
 
-    // Set validation error in useEffect to avoid state update during render
+    // Derive validation error from validation result (no state needed)
+    const validationError = validationResult && !validationResult.success;
+
+    // Log validation errors when they occur
     useEffect(() => {
-        if (validationResult && !validationResult.success) {
+        if (validationError) {
             console.error(
                 "Dashboard data validation failed",
-                validationResult.error.format()
+                validationResult?.error.format()
             );
-            setValidationError(true);
-        } else {
-            setValidationError(false);
         }
-    }, [validationResult]);
+    }, [validationError, validationResult?.error]);
 
     // Use validated data if validation succeeds, otherwise use raw data
     const dataToRender = validationResult?.success ? validationResult.data : dashboardData;
@@ -195,21 +168,21 @@ export default function DashboardPage() {
     // Filter meetings by date
     const today = getLocalDateString();
     const todayMeetings = (dataToRender?.upcoming_meetings || []).filter(
-        (meeting: any) => meeting.meeting_date === today
+        (meeting: UpcomingMeeting) => meeting.meeting_date === today
     );
     const futureMeetings = (dataToRender?.upcoming_meetings || []).filter(
-        (meeting: any) => meeting.meeting_date > today
+        (meeting: UpcomingMeeting) => meeting.meeting_date > today
     );
 
     // Filter preps for the table sections
     // Upcoming preps: meeting date is today or in the future
     const upcomingPreps = (dataToRender?.recent_preps || []).filter(
-        (prep: any) => prep.meeting_date && prep.meeting_date >= today
+        (prep: UpcomingPrep) => prep.meeting_date && prep.meeting_date >= today
     );
 
     // Old preps: meeting date has passed (yesterday or earlier)
     const oldPreps = (dataToRender?.recent_preps || []).filter(
-        (prep: any) => prep.meeting_date && prep.meeting_date < today
+        (prep: UpcomingPrep) => prep.meeting_date && prep.meeting_date < today
     );
 
     if (isLoading) {
@@ -249,7 +222,7 @@ export default function DashboardPage() {
                     <h1 className="text-4xl font-bold mb-4">
                         Welcome to Your Dashboard
                     </h1>
-                    <p className="text-xl text-zinc-600 mb-8">
+                    <p className="text-xl text-muted-foreground mb-8">
                         Create your first sales prep to get started and see
                         insights here.
                     </p>
@@ -267,7 +240,7 @@ export default function DashboardPage() {
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
                 <div className="flex items-center gap-2">
-                    <p className="text-zinc-600">
+                    <p className="text-muted-foreground/70">
                         Track your sales prep performance and upcoming meetings.
                     </p>
                     {isValidating && (
@@ -317,7 +290,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-600">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Total Preps
                         </CardTitle>
                     </CardHeader>
@@ -333,7 +306,7 @@ export default function DashboardPage() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-600">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Success Rate
                         </CardTitle>
                     </CardHeader>
@@ -350,7 +323,7 @@ export default function DashboardPage() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-600">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Avg Confidence
                         </CardTitle>
                     </CardHeader>
@@ -377,7 +350,7 @@ export default function DashboardPage() {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-600">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Est. Time Saved
                         </CardTitle>
                     </CardHeader>
@@ -402,7 +375,7 @@ export default function DashboardPage() {
                         </span>
                     </div>
                     <div className="grid gap-4">
-                        {todayMeetings.map((meeting: any) => (
+                        {todayMeetings.map((meeting: UpcomingMeeting) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
@@ -449,7 +422,7 @@ export default function DashboardPage() {
                         Future meetings (next 7 days)
                     </p>
                     <div className="grid gap-4">
-                        {futureMeetings.map((meeting: any) => (
+                        {futureMeetings.map((meeting: UpcomingMeeting) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow"
@@ -526,7 +499,7 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {upcomingPreps.map((prep: any) => (
+                                        {upcomingPreps.map((prep: UpcomingPrep) => (
                                             <tr
                                                 key={prep.id}
                                                 className="border-b hover:bg-neutral-800 transition-colors"
@@ -535,12 +508,21 @@ export default function DashboardPage() {
                                                     {prep.company_name}
                                                 </td>
                                                 <td className="p-4">
-                                                    <p className="max-w-md truncate text-zinc-200">
-                                                        {prep.meeting_objective}
-                                                    </p>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                            <p className="max-w-md truncate text-zinc-200 cursor-help">
+                                                                {prep.meeting_objective}
+                                                            </p>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top" className="max-w-xs">
+                                                            {prep.meeting_objective}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
                                                 </td>
                                                 <td className="p-4 text-zinc-500">
-                                                    {formatDate(prep.meeting_date)}
+                                                    {prep.meeting_date ? formatDate(prep.meeting_date) : "No date"}
                                                 </td>
                                                 <td className="p-4">
                                                     <Badge
@@ -620,7 +602,7 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {oldPreps.map((prep: any) => (
+                                        {oldPreps.map((prep: UpcomingPrep) => (
                                             <tr
                                                 key={prep.id}
                                                 className="border-b hover:bg-neutral-800 transition-colors"
@@ -634,7 +616,7 @@ export default function DashboardPage() {
                                                     </p>
                                                 </td>
                                                 <td className="p-4 text-zinc-500">
-                                                    {formatDate(prep.meeting_date)}
+                                                    {prep.meeting_date ? formatDate(prep.meeting_date) : "No date"}
                                                 </td>
                                                 <td className="p-4">
                                                     <Badge
