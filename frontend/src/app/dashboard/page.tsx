@@ -7,6 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "@/hooks/useDashboard";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 // Zod schema for runtime validation of dashboard data
 const RecentPrepSchema = z.object({
@@ -535,9 +541,18 @@ export default function DashboardPage() {
                                                     {prep.company_name}
                                                 </td>
                                                 <td className="p-4">
-                                                    <p className="max-w-md truncate text-zinc-200">
-                                                        {prep.meeting_objective}
-                                                    </p>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                            <p className="max-w-md truncate text-zinc-200 cursor-help">
+                                                                {prep.meeting_objective}
+                                                            </p>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top" className="max-w-xs">
+                                                            {prep.meeting_objective}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
                                                 </td>
                                                 <td className="p-4 text-zinc-500">
                                                     {formatDate(prep.meeting_date)}

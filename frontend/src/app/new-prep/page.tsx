@@ -40,7 +40,7 @@ export default function NewPrepPage() {
         }
 
         setIsAuthenticated(true);
-      } catch (err: any) {
+      } catch (err: unknown) {
         loggerError("Authentication check failed", { error: err });
         router.push("/login");
       } finally {
@@ -111,8 +111,12 @@ export default function NewPrepPage() {
       }
 
       router.push(`/prep/${data.prep_id}`);
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }
