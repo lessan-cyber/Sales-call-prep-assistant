@@ -25,12 +25,16 @@ const RecentPrepSchema = z.object({
     outcome_status: z.enum(["completed", "cancelled", "rescheduled"]).nullable(),
 });
 
+type UpcomingPrep = z.infer<typeof RecentPrepSchema>;
+
 const UpcomingMeetingSchema = z.object({
     id: z.string(),
     company_name: z.string(),
     meeting_objective: z.string(),
     meeting_date: z.string(),
 });
+
+type UpcomingMeeting = z.infer<typeof UpcomingMeetingSchema>;
 
 const DashboardDataSchema = z.object({
     total_preps: z.number(),
@@ -151,7 +155,6 @@ function formatRelativeTime(dateString: string): string {
 
 export default function DashboardPage() {
     const router = useRouter();
-    const [validationError, setValidationError] = useState(false);
 
     // Use SWR hook for data fetching and caching
     const { data: dashboardData, error, isLoading, isValidating, refresh } = useDashboard();
@@ -161,18 +164,18 @@ export default function DashboardPage() {
         ? DashboardDataSchema.safeParse(dashboardData)
         : null;
 
-    // Set validation error in useEffect to avoid state update during render
+    // Derive validation error from validation result (no state needed)
+    const validationError = validationResult && !validationResult.success;
+
+    // Log validation errors when they occur
     useEffect(() => {
-        if (validationResult && !validationResult.success) {
+        if (validationError) {
             console.error(
                 "Dashboard data validation failed",
-                validationResult.error.format()
+                validationResult?.error.format()
             );
-            setValidationError(true);
-        } else {
-            setValidationError(false);
         }
-    }, [validationResult]);
+    }, [validationError, validationResult?.error]);
 
     // Use validated data if validation succeeds, otherwise use raw data
     const dataToRender = validationResult?.success ? validationResult.data : dashboardData;
@@ -201,21 +204,21 @@ export default function DashboardPage() {
     // Filter meetings by date
     const today = getLocalDateString();
     const todayMeetings = (dataToRender?.upcoming_meetings || []).filter(
-        (meeting: any) => meeting.meeting_date === today
+        (meeting: UpcomingMeeting) => meeting.meeting_date === today
     );
     const futureMeetings = (dataToRender?.upcoming_meetings || []).filter(
-        (meeting: any) => meeting.meeting_date > today
+        (meeting: UpcomingMeeting) => meeting.meeting_date > today
     );
 
     // Filter preps for the table sections
     // Upcoming preps: meeting date is today or in the future
     const upcomingPreps = (dataToRender?.recent_preps || []).filter(
-        (prep: any) => prep.meeting_date && prep.meeting_date >= today
+        (prep: UpcomingPrep) => prep.meeting_date && prep.meeting_date >= today
     );
 
     // Old preps: meeting date has passed (yesterday or earlier)
     const oldPreps = (dataToRender?.recent_preps || []).filter(
-        (prep: any) => prep.meeting_date && prep.meeting_date < today
+        (prep: UpcomingPrep) => prep.meeting_date && prep.meeting_date < today
     );
 
     if (isLoading) {
@@ -408,7 +411,7 @@ export default function DashboardPage() {
                         </span>
                     </div>
                     <div className="grid gap-4">
-                        {todayMeetings.map((meeting: any) => (
+                        {todayMeetings.map((meeting: UpcomingMeeting) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
@@ -455,7 +458,7 @@ export default function DashboardPage() {
                         Future meetings (next 7 days)
                     </p>
                     <div className="grid gap-4">
-                        {futureMeetings.map((meeting: any) => (
+                        {futureMeetings.map((meeting: UpcomingMeeting) => (
                             <Card
                                 key={meeting.id}
                                 className="hover:shadow-md transition-shadow"
@@ -532,7 +535,7 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {upcomingPreps.map((prep: any) => (
+                                        {upcomingPreps.map((prep: UpcomingPrep) => (
                                             <tr
                                                 key={prep.id}
                                                 className="border-b hover:bg-neutral-800 transition-colors"
@@ -555,7 +558,7 @@ export default function DashboardPage() {
                                                     </TooltipProvider>
                                                 </td>
                                                 <td className="p-4 text-zinc-500">
-                                                    {formatDate(prep.meeting_date)}
+                                                    {prep.meeting_date ? formatDate(prep.meeting_date) : "No date"}
                                                 </td>
                                                 <td className="p-4">
                                                     <Badge
@@ -635,7 +638,7 @@ export default function DashboardPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {oldPreps.map((prep: any) => (
+                                        {oldPreps.map((prep: UpcomingPrep) => (
                                             <tr
                                                 key={prep.id}
                                                 className="border-b hover:bg-neutral-800 transition-colors"
@@ -649,7 +652,7 @@ export default function DashboardPage() {
                                                     </p>
                                                 </td>
                                                 <td className="p-4 text-zinc-500">
-                                                    {formatDate(prep.meeting_date)}
+                                                    {prep.meeting_date ? formatDate(prep.meeting_date) : "No date"}
                                                 </td>
                                                 <td className="p-4">
                                                     <Badge
