@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string, accessToken: string) => {
+  const fetchUserProfile = async (userId: string, accessToken: string, retries = 3) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/profile`, {
         headers: {
@@ -54,17 +54,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profile: UserProfile = await response.json();
         setUserProfile(profile);
       } else if (response.status === 404) {
-        // Profile not found, user needs to create one
         setUserProfile(null);
+      } else if (response.status === 503 && retries > 0) {
+        await new Promise(r => setTimeout(r, 1000 * (4 - retries)));
+        return fetchUserProfile(userId, accessToken, retries - 1);
       } else {
         console.error('Failed to fetch user profile:', response.statusText);
         setUserProfile(null);
       }
     } catch (error) {
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, 1000 * (4 - retries)));
+        return fetchUserProfile(userId, accessToken, retries - 1);
+      }
       console.error('Error fetching user profile:', error);
       setUserProfile(null);
     } finally {
-      // Always set profileLoading to false when done
       setProfileLoading(false);
     }
   };

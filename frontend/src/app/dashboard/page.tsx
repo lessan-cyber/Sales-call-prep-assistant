@@ -10,7 +10,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useDashboard } from "@/hooks/useDashboard";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useDashboard, registerDashboardMutate } from "@/hooks/useDashboard";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 // Confidence score thresholds for UI classification
@@ -129,6 +135,11 @@ export default function DashboardPage() {
         isValidating,
         refresh,
     } = useDashboard();
+
+    // Register mutate function for global invalidation
+    useEffect(() => {
+        registerDashboardMutate(refresh);
+    }, [refresh]);
 
     // Validate the response data using Zod
     const validationResult = dashboardData
@@ -312,7 +323,7 @@ export default function DashboardPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">
+                        <div className="text-5xl font-bold">
                             {dataToRender.total_preps}
                         </div>
                         <p className="text-xs text-zinc-500 mt-1">
@@ -328,7 +339,7 @@ export default function DashboardPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">
+                        <div className="text-5xl font-bold">
                             {dataToRender.success_rate}%
                         </div>
                         <p className="text-xs text-zinc-500 mt-1">
@@ -346,7 +357,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-center gap-2">
-                            <div className="text-3xl font-bold">
+                            <div className="text-5xl font-bold">
                                 {dataToRender.avg_confidence.toFixed(2)}
                             </div>
                             <Badge
@@ -372,7 +383,7 @@ export default function DashboardPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">
+                        <div className="text-5xl font-bold">
                             {dataToRender.time_saved_hours}h
                         </div>
                         <p className="text-xs text-zinc-500 mt-1">

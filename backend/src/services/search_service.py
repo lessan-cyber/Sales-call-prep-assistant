@@ -1,11 +1,11 @@
 """Search service wrapper for SerpAPI web search."""
 
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
-# from serpapi import GoogleSearch
-from ..config import settings
-from ..utils.logger import info, error
 from serpapi.client import SerpAPI
+
+from ..config import settings
+from ..utils.logger import error, info
 
 
 class SearchService:

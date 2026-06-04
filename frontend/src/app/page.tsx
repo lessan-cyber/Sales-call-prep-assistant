@@ -2,16 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useRedirectAuthenticated } from "@/hooks/useRequireAuth";
 
 export default function Home() {
   const router = useRouter();
 
-  // Use the requireAuth hook for homepage logic:
-  // - If authenticated with profile → redirect to dashboard
-  // - If authenticated without profile → redirect to profile
-  // - If not authenticated → stay on homepage
-  const { loading } = useRequireAuth();
+  // Redirect authenticated users to dashboard
+  const { loading } = useRedirectAuthenticated();
 
   if (loading) {
     return (

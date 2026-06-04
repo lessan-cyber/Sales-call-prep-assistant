@@ -1,9 +1,10 @@
 import json
-import os
+
 import httpx
 from fastapi import HTTPException, status
-from ..utils.logger import info, error
+
 from ..config import settings
+from ..utils.logger import error, info
 
 
 async def perform_firecrawl_scrape(url: str) -> dict:

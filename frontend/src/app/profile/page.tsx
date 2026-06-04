@@ -18,6 +18,7 @@ import { Trash2, Edit2, Mail, Building2, Tag, X } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { LogOut } from "lucide-react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { invalidateDashboard } from "@/hooks/useDashboard";
 
 const MIN_PORTFOLIO_ITEMS = 5;
 const MAX_PORTFOLIO_ITEMS = 20;
@@ -203,6 +204,7 @@ export default function ProfilePage() {
 
             const data = await response.json();
             setSuccess("Profile saved successfully!");
+            invalidateDashboard();
 
             // Redirect to dashboard after short delay to show success message
             // Clear any existing timeout to prevent memory leaks

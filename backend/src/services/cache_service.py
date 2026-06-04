@@ -1,8 +1,11 @@
 """Cache service for managing company research data."""
+
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from supabase import AsyncClient
-from ..utils.logger import info, error
+
+from ..utils.logger import error, info
 
 
 class CacheService:

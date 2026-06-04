@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { error as loggerError } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/client";
+import { invalidateDashboard } from "@/hooks/useDashboard";
 import {
     Card,
     CardContent,
@@ -101,6 +102,7 @@ export default function NewPrepPage() {
                 throw new Error("No prep_id received from server");
             }
 
+            invalidateDashboard();
             router.push(`/prep/${data.prep_id}`);
         } catch (err: unknown) {
             if (err instanceof Error) {

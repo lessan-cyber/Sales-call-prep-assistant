@@ -1,8 +1,12 @@
 """Apify client wrapper for LinkedIn scraping."""
-from typing import Optional, Dict, Any
+
+from typing import Any, Dict
+
 from apify_client import ApifyClient
+
 from ..config import settings
-from ..utils.logger import info, error
+from ..utils.logger import error, info
+from .search_service import search_service
 
 
 class ApifyService:
@@ -24,9 +28,6 @@ class ApifyService:
         """
         try:
             info(f"Scraping LinkedIn data for company: {company_name}")
-
-            # Try to discover the actual LinkedIn company URL via search
-            from .search_service import search_service
 
             search_query = f'"{company_name}" LinkedIn company site:linkedin.com/company'
             search_results = await search_service.search(search_query, num_results=5)
@@ -133,9 +134,6 @@ class ApifyService:
             # Then scrape it with the actor
             search_query = f'"{person_name}" "{company_name}" LinkedIn'
 
-            # Import search service here to avoid circular imports
-            from .search_service import search_service
-
             # Search for the LinkedIn profile URL
             search_results = await search_service.search(search_query, num_results=5)
 
@@ -241,9 +239,6 @@ class ApifyService:
         """
         try:
             info(f"Scraping LinkedIn posts for: {company_name}")
-
-            # Try to discover the actual LinkedIn company URL via search
-            from .search_service import search_service
 
             search_query = f'"{company_name}" LinkedIn company site:linkedin.com/company'
             search_results = await search_service.search(search_query, num_results=5)
