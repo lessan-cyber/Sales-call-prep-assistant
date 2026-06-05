@@ -1,8 +1,12 @@
 """Apify client wrapper for LinkedIn scraping."""
-from typing import Optional, Dict, Any
+
+from typing import Any
+
 from apify_client import ApifyClient
+
 from ..config import settings
-from ..utils.logger import info, error
+from ..utils.logger import error, info
+from .search_service import search_service
 
 
 class ApifyService:
@@ -12,7 +16,7 @@ class ApifyService:
         """Initialize the Apify client."""
         self.client = ApifyClient(token=settings.APIFY_API_KEY)
 
-    async def scrape_company_linkedin(self, company_name: str) -> Dict[str, Any]:
+    async def scrape_company_linkedin(self, company_name: str) -> dict[str, Any]:
         """
         Scrape company LinkedIn page using Apify actor.
 
@@ -25,10 +29,9 @@ class ApifyService:
         try:
             info(f"Scraping LinkedIn data for company: {company_name}")
 
-            # Try to discover the actual LinkedIn company URL via search
-            from .search_service import search_service
-
-            search_query = f'"{company_name}" LinkedIn company site:linkedin.com/company'
+            search_query = (
+                f'"{company_name}" LinkedIn company site:linkedin.com/company'
+            )
             search_results = await search_service.search(search_query, num_results=5)
 
             run_input = {}
@@ -39,19 +42,13 @@ class ApifyService:
                     link = result.get("link", "")
                     if "linkedin.com/company/" in link:
                         info(f"Found LinkedIn URL for {company_name}: {link}")
-                        run_input = {
-                            "startUrls": [{"url": link}],
-                            "maxResults": 1
-                        }
+                        run_input = {"startUrls": [{"url": link}], "maxResults": 1}
                         break
 
             # If no URL found, try using the company's name directly
             if not run_input:
                 info(f"No LinkedIn URL found for {company_name}, using company name")
-                run_input = {
-                    "companyName": company_name,
-                    "maxResults": 1
-                }
+                run_input = {"companyName": company_name, "maxResults": 1}
 
             actor_id = "scrapeverse/linkedin-company-profile-scraper"
             run = self.client.actor(actor_id).call(run_input=run_input)
@@ -66,15 +63,11 @@ class ApifyService:
                 return {
                     "success": True,
                     "data": results[0],
-                    "source": "apify_company_linkedin"
+                    "source": "apify_company_linkedin",
                 }
             else:
                 error(f"No LinkedIn data found for {company_name}")
-                return {
-                    "success": False,
-                    "data": None,
-                    "error": "No data found"
-                }
+                return {"success": False, "data": None, "error": "No data found"}
 
         except Exception as e:
             error_msg = str(e).lower()
@@ -85,28 +78,30 @@ class ApifyService:
                 return {
                     "success": False,
                     "data": None,
-                    "error": "Apify trial expired. Please rent the paid actor to continue using LinkedIn company scraping."
+                    "error": "Apify trial expired. Please rent the paid actor to continue using LinkedIn company scraping.",
                 }
             elif "quota" in error_msg or "billing" in error_msg:
                 return {
                     "success": False,
                     "data": None,
-                    "error": "Apify quota exceeded. Please check your billing or upgrade your plan."
+                    "error": "Apify quota exceeded. Please check your billing or upgrade your plan.",
                 }
             elif "rate limit" in error_msg or "429" in error_msg:
                 return {
                     "success": False,
                     "data": None,
-                    "error": "Apify rate limit exceeded. Please try again later."
+                    "error": "Apify rate limit exceeded. Please try again later.",
                 }
             else:
                 return {
                     "success": False,
                     "data": None,
-                    "error": f"LinkedIn company scraping failed: {str(e)}"
+                    "error": f"LinkedIn company scraping failed: {str(e)}",
                 }
 
-    async def search_linkedin_profile(self, person_name: str, company_name: str) -> Dict[str, Any]:
+    async def search_linkedin_profile(
+        self, person_name: str, company_name: str
+    ) -> dict[str, Any]:
         """
         Search for a person's LinkedIn profile by first finding their URL, then scraping it.
 
@@ -133,18 +128,17 @@ class ApifyService:
             # Then scrape it with the actor
             search_query = f'"{person_name}" "{company_name}" LinkedIn'
 
-            # Import search service here to avoid circular imports
-            from .search_service import search_service
-
             # Search for the LinkedIn profile URL
             search_results = await search_service.search(search_query, num_results=5)
 
-            if not search_results.get("success") or not search_results.get("organic_results"):
+            if not search_results.get("success") or not search_results.get(
+                "organic_results"
+            ):
                 error(f"No search results found for {person_name}")
                 return {
                     "success": False,
                     "data": None,
-                    "error": "Profile not found - no search results"
+                    "error": "Profile not found - no search results",
                 }
 
             # Find the LinkedIn profile URL from search results
@@ -159,15 +153,13 @@ class ApifyService:
                 return {
                     "success": False,
                     "data": None,
-                    "error": "No LinkedIn profile URL found"
+                    "error": "No LinkedIn profile URL found",
                 }
 
             info(f"Found LinkedIn URL for {person_name}: {linkedin_url}")
 
             # Now scrape the profile using the URL
-            run_input = {
-                "linkedinUrls": [linkedin_url]
-            }
+            run_input = {"linkedinUrls": [linkedin_url]}
 
             actor_id = "icypeas_official/linkedin-profile-scraper"
             run = self.client.actor(actor_id).call(run_input=run_input)
@@ -182,14 +174,14 @@ class ApifyService:
                 return {
                     "success": True,
                     "data": results[0],
-                    "source": "apify_profile_scraper"
+                    "source": "apify_profile_scraper",
                 }
             else:
                 error(f"No data returned from scraper for {person_name}")
                 return {
                     "success": False,
                     "data": None,
-                    "error": "Profile scraping returned no data"
+                    "error": "Profile scraping returned no data",
                 }
 
         except Exception as e:
@@ -201,34 +193,36 @@ class ApifyService:
                 return {
                     "success": False,
                     "data": None,
-                    "error": "Apify trial expired. Please rent the paid actor to continue using LinkedIn profile scraping."
+                    "error": "Apify trial expired. Please rent the paid actor to continue using LinkedIn profile scraping.",
                 }
             elif "quota" in error_msg or "billing" in error_msg:
                 return {
                     "success": False,
                     "data": None,
-                    "error": "Apify quota exceeded. Please check your billing or upgrade your plan."
+                    "error": "Apify quota exceeded. Please check your billing or upgrade your plan.",
                 }
             elif "rate limit" in error_msg or "429" in error_msg:
                 return {
                     "success": False,
                     "data": None,
-                    "error": "Apify rate limit exceeded. Please try again later."
+                    "error": "Apify rate limit exceeded. Please try again later.",
                 }
             elif "invalid" in error_msg and "argument" in error_msg:
                 return {
                     "success": False,
                     "data": None,
-                    "error": f"Invalid input for profile search: {str(e)}"
+                    "error": f"Invalid input for profile search: {str(e)}",
                 }
             else:
                 return {
                     "success": False,
                     "data": None,
-                    "error": f"LinkedIn profile search failed: {str(e)}"
+                    "error": f"LinkedIn profile search failed: {str(e)}",
                 }
 
-    async def scrape_linkedin_posts(self, company_name: str, limit: int = 10) -> Dict[str, Any]:
+    async def scrape_linkedin_posts(
+        self, company_name: str, limit: int = 10
+    ) -> dict[str, Any]:
         """
         Scrape recent LinkedIn posts from a company.
 
@@ -242,10 +236,9 @@ class ApifyService:
         try:
             info(f"Scraping LinkedIn posts for: {company_name}")
 
-            # Try to discover the actual LinkedIn company URL via search
-            from .search_service import search_service
-
-            search_query = f'"{company_name}" LinkedIn company site:linkedin.com/company'
+            search_query = (
+                f'"{company_name}" LinkedIn company site:linkedin.com/company'
+            )
             search_results = await search_service.search(search_query, num_results=5)
 
             run_input = {}
@@ -256,19 +249,13 @@ class ApifyService:
                     link = result.get("link", "")
                     if "linkedin.com/company/" in link:
                         info(f"Found LinkedIn URL for {company_name}: {link}")
-                        run_input = {
-                            "urls": [link],
-                            "maxPosts": limit
-                        }
+                        run_input = {"urls": [link], "maxPosts": limit}
                         break
 
             # If no URL found, try using the company's name directly
             if not run_input:
                 info(f"No LinkedIn URL found for {company_name}, using company name")
-                run_input = {
-                    "companyName": company_name,
-                    "maxPosts": limit
-                }
+                run_input = {"companyName": company_name, "maxPosts": limit}
 
             actor_id = "supreme_coder/linkedin-post"
             run = self.client.actor(actor_id).call(run_input=run_input)
@@ -279,19 +266,13 @@ class ApifyService:
                 results.append(item)
 
             if results:
-                info(f"Successfully scraped {len(results)} LinkedIn posts for {company_name}")
-                return {
-                    "success": True,
-                    "data": results,
-                    "source": "apify_posts"
-                }
+                info(
+                    f"Successfully scraped {len(results)} LinkedIn posts for {company_name}"
+                )
+                return {"success": True, "data": results, "source": "apify_posts"}
             else:
                 error(f"No LinkedIn posts found for {company_name}")
-                return {
-                    "success": False,
-                    "data": [],
-                    "error": "No posts found"
-                }
+                return {"success": False, "data": [], "error": "No posts found"}
 
         except Exception as e:
             error_msg = str(e).lower()
@@ -302,25 +283,25 @@ class ApifyService:
                 return {
                     "success": False,
                     "data": [],
-                    "error": "Apify trial expired. Please rent the paid actor to continue using LinkedIn posts scraping."
+                    "error": "Apify trial expired. Please rent the paid actor to continue using LinkedIn posts scraping.",
                 }
             elif "quota" in error_msg or "billing" in error_msg:
                 return {
                     "success": False,
                     "data": [],
-                    "error": "Apify quota exceeded. Please check your billing or upgrade your plan."
+                    "error": "Apify quota exceeded. Please check your billing or upgrade your plan.",
                 }
             elif "rate limit" in error_msg or "429" in error_msg:
                 return {
                     "success": False,
                     "data": [],
-                    "error": "Apify rate limit exceeded. Please try again later."
+                    "error": "Apify rate limit exceeded. Please try again later.",
                 }
             else:
                 return {
                     "success": False,
                     "data": [],
-                    "error": f"LinkedIn posts scraping failed: {str(e)}"
+                    "error": f"LinkedIn posts scraping failed: {str(e)}",
                 }
 
 

@@ -172,6 +172,8 @@ describe('AuthProvider', () => {
   });
 
   it('should handle profile fetch error', async () => {
+    jest.useFakeTimers();
+
     const mockSession = {
       user: { id: 'user-123' },
       access_token: 'mock-token',
@@ -186,7 +188,7 @@ describe('AuthProvider', () => {
       return { data: { subscription: mockSubscription } };
     });
 
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+    (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
 
     render(
       <AuthProvider>
@@ -198,9 +200,15 @@ describe('AuthProvider', () => {
       authCallback('SIGNED_IN', mockSession);
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('loading')).toHaveTextContent('not loading');
-      expect(screen.getByTestId('user')).toHaveTextContent('no user');
+    await act(async () => {
+      await waitFor(() => {
+        expect(screen.getByTestId('loading')).toHaveTextContent('not loading');
+        expect(screen.getByTestId('user')).toHaveTextContent('no user');
+      });
+    });
+
+    await act(async () => {
+      await jest.runAllTimersAsync();
     });
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -209,6 +217,7 @@ describe('AuthProvider', () => {
     );
 
     consoleErrorSpy.mockRestore();
+    jest.useRealTimers();
   });
 
   it('should unsubscribe on unmount', () => {

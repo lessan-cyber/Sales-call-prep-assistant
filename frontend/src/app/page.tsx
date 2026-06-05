@@ -1,35 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useRedirectAuthenticated } from "@/hooks/useRequireAuth";
 
 export default function Home() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkAuthAndRedirect = async () => {
-      try {
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session) {
-          // User is authenticated, redirect to dashboard
-          router.push("/dashboard");
-          return;
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error checking auth:", error);
-        setLoading(false);
-      }
-    };
-
-    checkAuthAndRedirect();
-  }, [router]);
+  // Redirect authenticated users to dashboard
+  const { loading } = useRedirectAuthenticated();
 
   if (loading) {
     return (

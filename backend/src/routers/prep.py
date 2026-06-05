@@ -1,20 +1,15 @@
 """Router for sales prep generation using two-agent system."""
 
-import re
-from datetime import datetime, timedelta
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from supabase_auth.types import User
-
 from supabase import AsyncClient
+from supabase_auth.types import User
 
 from ..agents import research_orchestrator, sales_brief_synthesizer
 from ..dependencies import get_current_user, get_supabase_client
-from ..schemas.prep_report import PrepRequest
 from ..schemas.meeting_outcome import MeetingOutcomeCreate
+from ..schemas.prep_report import PrepReport, PrepRequest
 from ..services.cache_service import CacheService
-from ..services.supabase_service import SupabaseService, get_supabase_service
+from ..services.supabase_service import get_supabase_service
 from ..utils.logger import error, info
 from ..utils.normalise import normalize_company_name
 
@@ -188,8 +183,6 @@ async def get_prep_report(
     Returns:
         The prep report
     """
-    from ..schemas.prep_report import PrepReport
-
     info(
         f"Received request to fetch prep report with ID: {prep_id} "
         f"by user: {current_user.id}"
@@ -242,12 +235,7 @@ async def record_meeting_outcome(
     Returns:
         Success message with outcome ID
     """
-    from ..services.supabase_service import get_supabase_service
-
-    info(
-        f"Recording meeting outcome for prep ID: {prep_id} "
-        f"by user: {current_user.id}"
-    )
+    info(f"Recording meeting outcome for prep ID: {prep_id} by user: {current_user.id}")
 
     # Verify the prep belongs to the current user
     supabase_service = get_supabase_service()
@@ -261,8 +249,7 @@ async def record_meeting_outcome(
 
     # Save the outcome (outcome_data is already validated by FastAPI)
     outcome_id = await supabase_service.save_meeting_outcome(
-        prep_id=prep_id,
-        outcome_data=outcome_data.model_dump(exclude_unset=True)
+        prep_id=prep_id, outcome_data=outcome_data.model_dump(exclude_unset=True)
     )
 
     if not outcome_id:
@@ -276,7 +263,7 @@ async def record_meeting_outcome(
 
     return {
         "message": "Meeting outcome recorded successfully",
-        "outcome_id": outcome_id
+        "outcome_id": outcome_id,
     }
 
 
@@ -297,12 +284,7 @@ async def get_meeting_outcome(
     Returns:
         The meeting outcome
     """
-    from ..services.supabase_service import get_supabase_service
-
-    info(
-        f"Fetching meeting outcome for prep ID: {prep_id} "
-        f"by user: {current_user.id}"
-    )
+    info(f"Fetching meeting outcome for prep ID: {prep_id} by user: {current_user.id}")
 
     # Verify the prep belongs to the current user
     supabase_service = get_supabase_service()

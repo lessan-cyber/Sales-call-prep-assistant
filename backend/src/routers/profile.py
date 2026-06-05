@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from supabase_auth.types import User
-
 from supabase import AsyncClient
+from supabase_auth.types import User
 
 from ..dependencies import get_current_user, get_supabase_client
 from ..schemas.user_profile import UserProfile

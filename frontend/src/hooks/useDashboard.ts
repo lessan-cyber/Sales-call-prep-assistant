@@ -34,7 +34,7 @@ export function useDashboard() {
             : null,
         {
             revalidateOnFocus: true,
-            revalidateOnReconnect: true,
+            revalidateOnReconnect: false,
             refreshInterval: 0,
         }
     );
@@ -46,4 +46,18 @@ export function useDashboard() {
         isValidating,
         refresh: mutate,
     };
+}
+
+let globalMutate: (() => void) | null = null;
+
+export function invalidateDashboard() {
+    globalMutate?.();
+}
+
+export function registerDashboardMutate(fn: () => void) {
+    globalMutate = fn;
+}
+
+export function unregisterDashboardMutate() {
+    globalMutate = null;
 }

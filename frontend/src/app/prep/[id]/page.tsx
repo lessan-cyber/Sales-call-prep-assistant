@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { exportPrepToPDF } from "@/utils/exportToPDF";
 import { RecordOutcome } from "@/components/RecordOutcome";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 interface PrepData {
     executive_summary: {
@@ -101,6 +102,9 @@ export default function PrepDetailPage({
     const [pdfLoading, setPdfLoading] = useState(false);
     const [outcomeModalOpen, setOutcomeModalOpen] = useState(false);
 
+    // Protect route: require authentication and profile
+    const { loading: authLoading, isAuthenticated } = useRequireAuth({ requireProfile: true });
+
     // Handle PDF export
     const handleExportPDF = async () => {
         if (!prepData) return;
@@ -119,6 +123,12 @@ export default function PrepDetailPage({
     };
 
     useEffect(() => {
+        if (authLoading || !isAuthenticated) {
+            return;
+        }
+
+        const abortController = new AbortController();
+
         const fetchPrep = async () => {
             try {
                 const supabase = createClient();
@@ -126,12 +136,18 @@ export default function PrepDetailPage({
                     data: { session },
                 } = await supabase.auth.getSession();
 
+                if (!session?.access_token) {
+                    setError("Session expired. Please sign in again.");
+                    return;
+                }
+
                 const response = await fetch(
                     `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/preps/${id}`,
                     {
                         headers: {
-                            Authorization: `Bearer ${session?.access_token}`,
+                            Authorization: `Bearer ${session.access_token}`,
                         },
+                        signal: abortController.signal,
                     },
                 );
 
@@ -142,14 +158,18 @@ export default function PrepDetailPage({
                 const data = await response.json();
                 setPrepData(data);
             } catch (err: any) {
-                setError(err.message || "Failed to load prep report");
+                if (err.name !== "AbortError") {
+                    setError(err.message || "Failed to load prep report");
+                }
             } finally {
                 setLoading(false);
             }
         };
 
         fetchPrep();
-    }, [id]);
+
+        return () => abortController.abort();
+    }, [id, authLoading, isAuthenticated]);
 
     if (loading) {
         return (
