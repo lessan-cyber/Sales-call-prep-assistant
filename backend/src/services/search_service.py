@@ -1,6 +1,6 @@
 """Search service wrapper for SerpAPI web search."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from serpapi.client import SerpAPI
 
@@ -16,7 +16,7 @@ class SearchService:
         # Create SerpAPI client with connection pooling
         self.client = SerpAPI(api_key=settings.SERP_API_KEY)
 
-    async def search(self, query: str, num_results: int = 10) -> Dict[str, Any]:
+    async def search(self, query: str, num_results: int = 10) -> dict[str, Any]:
         """
         Perform a web search using SerpAPI.
 
@@ -166,7 +166,7 @@ class SearchService:
 
     async def search_decision_makers(
         self, company_name: str, person_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for decision makers at a company.
 

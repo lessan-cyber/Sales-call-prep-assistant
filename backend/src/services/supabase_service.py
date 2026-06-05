@@ -782,107 +782,20 @@ class SupabaseService:
                             f"Invalid status filter: '{status}'. Valid values are: {', '.join(valid_statuses)}"
                         )
 
-                # Use a single query with LEFT JOIN to handle pending filter
-                # pending = preps with no outcome record (LEFT JOIN where outcome IS NULL)
-                if "pending" in status_values and len(status_values) == 1:
-                    # Single pending filter - use LEFT JOIN IS NULL pattern
-                    response = (
-                        await self.supabase.rpc(
-                            "get_preps_by_status",
-                            {
-                                "p_user_id": user_id,
-                                "p_status": "pending",
-                                "p_limit": limit,
-                                "p_offset": offset,
-                                "p_search": search if search else None,
-                            }
-                        ).execute()
-                    )
-                    return response.data if response.data else []
-                elif "pending" not in status_values:
-                    # Only non-pending statuses - use direct filter
-                    outcomes_response = (
-                        await self.supabase.table("meeting_outcomes")
-                        .select("prep_id")
-                        .in_("meeting_status", status_values)
-                        .execute()
-                    )
-                    prep_ids = (
-                        [o["prep_id"] for o in outcomes_response.data]
-                        if outcomes_response.data
-                        else []
-                    )
-
-                    if not prep_ids:
-                        return []
-
-                    response = (
-                        query.in_("id", prep_ids)
-                        .order("created_at", desc=True)
-                        .range(offset, offset + limit - 1)
-                        .execute()
-                    )
-                    return response.data if response.data else []
-                else:
-                    # Mixed statuses including pending - use efficient subquery approach
-                    # First get pending prep IDs (those without outcomes)
-                    pending_response = (
-                        await self.supabase.table("meeting_preps")
-                        .select("id")
-                        .eq("user_id", user_id)
-                        .execute()
-                    )
-                    all_prep_ids = (
-                        [p["id"] for p in pending_response.data]
-                        if pending_response.data
-                        else []
-                    )
-
-                    if all_prep_ids:
-                        outcome_response = (
-                            await self.supabase.table("meeting_outcomes")
-                            .select("prep_id")
-                            .in_("prep_id", all_prep_ids)
-                            .execute()
-                        )
-                        prep_ids_with_outcomes = set(
-                            o["prep_id"] for o in outcome_response.data
-                        ) if outcome_response.data else set()
-                        pending_prep_ids = [
-                            pid for pid in all_prep_ids
-                            if pid not in prep_ids_with_outcomes
-                        ]
-                    else:
-                        pending_prep_ids = []
-
-                    # Get other statuses
-                    other_statuses = [s for s in status_values if s != "pending"]
-                    other_prep_ids = []
-                    if other_statuses:
-                        outcomes_response = (
-                            await self.supabase.table("meeting_outcomes")
-                            .select("prep_id")
-                            .in_("meeting_status", other_statuses)
-                            .execute()
-                        )
-                        other_prep_ids = (
-                            [o["prep_id"] for o in outcomes_response.data]
-                            if outcomes_response.data
-                            else []
-                        )
-
-                    # Combine and apply filter
-                    combined_ids = pending_prep_ids + other_prep_ids
-                    if not combined_ids:
-                        return []
-
-                    response = (
-                        query.in_("id", combined_ids)
-                        .order("created_at", desc=True)
-                        .range(offset, offset + limit - 1)
-                        .execute()
-                    )
-                    return response.data if response.data else []
+                # Use RPC with array of statuses - SQL handles pending logic internally
+                response = (
+                    await self.supabase.rpc(
+                        "get_preps_by_status",
+                        {
+                            "p_user_id": user_id,
+                            "p_statuses": status_values,
+                            "p_limit": limit,
+                            "p_offset": offset,
+                            "p_search": search if search else None,
+                        }
+                    ).execute()
+                )
+                return response.data if response.data else []
 
             # Apply search
             if search:
@@ -936,69 +849,16 @@ class SupabaseService:
                             f"Invalid status filter: '{status}'. Valid values are: {', '.join(valid_statuses)}"
                         )
 
-                # Use optimized function for single status
-                if len(status_values) == 1:
-                    count_response = await self.supabase.rpc(
-                        "get_preps_count_by_status",
-                        {
-                            "p_user_id": user_id,
-                            "p_status": status_values[0],
-                            "p_search": search if search else None,
-                        }
-                    ).execute()
-                    return count_response.data if count_response.data else 0
-
-                # Mixed statuses - count each and sum
-                # pending count
-                pending_response = await self.supabase.rpc(
+                # Use RPC with array of statuses - SQL handles all logic internally
+                count_response = await self.supabase.rpc(
                     "get_preps_count_by_status",
                     {
                         "p_user_id": user_id,
-                        "p_status": "pending",
+                        "p_statuses": status_values,
                         "p_search": search if search else None,
                     }
                 ).execute()
-                pending_count = pending_response.data if pending_response.data else 0
-
-                # other statuses count
-                other_statuses = [s for s in status_values if s != "pending"]
-                other_count = 0
-                if other_statuses:
-                    # Get prep IDs for other statuses
-                    outcomes_response = (
-                        await self.supabase.table("meeting_outcomes")
-                        .select("prep_id")
-                        .in_("meeting_status", other_statuses)
-                        .execute()
-                    )
-                    other_prep_ids = (
-                        [o["prep_id"] for o in outcomes_response.data]
-                        if outcomes_response.data
-                        else []
-                    )
-
-                    if other_prep_ids:
-                        # Count with search if provided
-                        if search:
-                            count_response = (
-                                await self.supabase.table("meeting_preps")
-                                .select("id", count="exact")
-                                .eq("user_id", user_id)
-                                .in_("id", other_prep_ids)
-                                .ilike("company_name", f"%{search}%")
-                                .execute()
-                            )
-                        else:
-                            count_response = (
-                                await self.supabase.table("meeting_preps")
-                                .select("id", count="exact")
-                                .eq("user_id", user_id)
-                                .in_("id", other_prep_ids)
-                                .execute()
-                            )
-                        other_count = count_response.count if count_response.count else 0
-
-                return pending_count + other_count
+                return count_response.data if count_response.data else 0
 
             # No filter - simple count
             query = (
