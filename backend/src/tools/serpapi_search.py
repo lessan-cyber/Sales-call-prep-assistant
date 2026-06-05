@@ -32,18 +32,27 @@ async def perform_serpapi_search(query: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"SerpAPI request failed: {e}",
-        )
+        ) from e
     except httpx.HTTPStatusError as e:
+        serpapi_status = e.response.status_code
+        serpapi_text = e.response.text
+
         error(
-            f"SerpAPI HTTP error for '{query}': {e.response.status_code} - {e.response.text}"
+            f"SerpAPI HTTP error for '{query}': {serpapi_status} - {serpapi_text}"
         )
+
+        if serpapi_status >= 500:
+            upstream_status = status.HTTP_503_SERVICE_UNAVAILABLE
+        else:
+            upstream_status = status.HTTP_502_BAD_GATEWAY
+
         raise HTTPException(
-            status_code=e.response.status_code,
-            detail=f"SerpAPI HTTP error: {e.response.text}",
-        )
+            status_code=upstream_status,
+            detail="Search service temporarily unavailable. Please try again later.",
+        ) from e
     except Exception as e:
         error(f"An unexpected error occurred during SerpAPI search for '{query}': {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {e}",
-        )
+        ) from e

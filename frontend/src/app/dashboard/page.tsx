@@ -16,7 +16,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useDashboard, registerDashboardMutate } from "@/hooks/useDashboard";
+import { useDashboard, registerDashboardMutate, unregisterDashboardMutate } from "@/hooks/useDashboard";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 // Confidence score thresholds for UI classification
@@ -139,6 +139,7 @@ export default function DashboardPage() {
     // Register mutate function for global invalidation
     useEffect(() => {
         registerDashboardMutate(refresh);
+        return () => unregisterDashboardMutate();
     }, [refresh]);
 
     // Validate the response data using Zod

@@ -2,8 +2,11 @@
 -- This migration replaces the scalar-based functions with array-based ones
 -- to handle mixed status filters (including 'pending') in a single SQL query.
 -- Performance improvement: eliminates 3-4 client-side queries → 1 SQL query
+-- Security: Adds authorization check to prevent privilege escalation
 
--- Drop existing functions if they exist
+-- Drop existing functions if they exist (both old scalar and new array signatures)
+DROP FUNCTION IF EXISTS get_preps_by_status(uuid, varchar, int, int, varchar);
+DROP FUNCTION IF EXISTS get_preps_count_by_status(uuid, varchar, varchar);
 DROP FUNCTION IF EXISTS get_preps_by_status(uuid, varchar[], int, int, varchar);
 DROP FUNCTION IF EXISTS get_preps_count_by_status(uuid, varchar[], varchar);
 
@@ -26,8 +29,10 @@ RETURNS TABLE(
 )
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
+SECURITY INVOKER
 AS $$
+    -- Authorization check: if called by an authenticated user, verify they own the data
+    -- (auth.uid() IS NULL means service role or anonymous, which proceeds normally)
     SELECT
         mp.id,
         mp.company_name,
@@ -39,7 +44,8 @@ AS $$
         mo.outcome::VARCHAR AS outcome
     FROM meeting_preps mp
     LEFT JOIN meeting_outcomes mo ON mp.id = mo.prep_id
-    WHERE mp.user_id = p_user_id
+    WHERE (auth.uid() IS NULL OR auth.uid() = p_user_id)
+    AND mp.user_id = p_user_id
     AND (
         CASE
             WHEN 'pending' = ANY(p_statuses) AND mo.prep_id IS NULL THEN TRUE
@@ -64,12 +70,14 @@ CREATE OR REPLACE FUNCTION get_preps_count_by_status(
 RETURNS INT
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
+SECURITY INVOKER
 AS $$
+    -- Authorization check: if called by an authenticated user, verify they own the data
     SELECT COUNT(*)
     FROM meeting_preps mp
     LEFT JOIN meeting_outcomes mo ON mp.id = mo.prep_id
-    WHERE mp.user_id = p_user_id
+    WHERE (auth.uid() IS NULL OR auth.uid() = p_user_id)
+    AND mp.user_id = p_user_id
     AND (
         CASE
             WHEN 'pending' = ANY(p_statuses) AND mo.prep_id IS NULL THEN TRUE
@@ -85,7 +93,7 @@ GRANT EXECUTE ON FUNCTION get_preps_count_by_status(uuid, varchar[], varchar) TO
 
 COMMENT ON FUNCTION get_preps_by_status IS
 'Get preps with array of statuses. Handles pending via LEFT JOIN IS NULL pattern.
- Supports mixed statuses in single query for 40-50% performance improvement.';
+ Includes authorization check to prevent unauthorized access to other users data.';
 
 COMMENT ON FUNCTION get_preps_count_by_status IS
-'Count preps with same LEFT JOIN array pattern for consistent filtering.';
+'Count preps with same LEFT JOIN array pattern. Includes authorization check.';

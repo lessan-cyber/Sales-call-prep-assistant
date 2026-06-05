@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { error as loggerError } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/client";
 import { invalidateDashboard } from "@/hooks/useDashboard";
 import {
@@ -80,13 +79,19 @@ export default function NewPrepPage() {
                 data: { session },
             } = await supabase.auth.getSession();
 
+            if (!session?.access_token) {
+                setError("Session expired. Please sign in again.");
+                router.push("/login");
+                return;
+            }
+
             const response = await fetch(
                 `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/preps`,
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${session?.access_token}`,
+                        Authorization: `Bearer ${session.access_token}`,
                     },
                     body: JSON.stringify(formData),
                 },

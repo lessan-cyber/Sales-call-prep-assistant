@@ -14,6 +14,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
+function isValidRedirectPath(path: string | null): path is string {
+  if (!path) return false;
+  if (!path.startsWith('/')) return false;
+  if (path.includes('//')) return false;
+  if (/^https?:/i.test(path)) return false;
+  return true;
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,8 +35,9 @@ export default function LoginPage() {
   // Redirect authenticated users to dashboard
   const { loading: redirectLoading } = useRedirectAuthenticated();
 
-  // Get returnTo parameter for post-login redirect
-  const returnTo = searchParams.get('returnTo') || '/dashboard';
+  // Get returnTo parameter for post-login redirect (validated to prevent open-redirect)
+  const rawReturnTo = searchParams.get('returnTo');
+  const returnTo = isValidRedirectPath(rawReturnTo) ? rawReturnTo : '/dashboard';
 
   useEffect(() => {
     info("LoginPage mounted.");

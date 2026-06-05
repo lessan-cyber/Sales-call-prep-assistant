@@ -57,3 +57,7 @@ export function invalidateDashboard() {
 export function registerDashboardMutate(fn: () => void) {
     globalMutate = fn;
 }
+
+export function unregisterDashboardMutate() {
+    globalMutate = null;
+}

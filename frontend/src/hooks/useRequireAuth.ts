@@ -45,11 +45,6 @@ export function useRequireAuth(options: RequireAuthOptions = {}) {
       router.push("/profile");
       return;
     }
-
-    // Authenticated and has profile (or profile not required) - stay where you are
-    if (user || !requireProfile) {
-      return;
-    }
   }, [session, user, loading, profileLoading, requireProfile, router, returnTo]);
 
   // Return auth state for components to use
@@ -68,24 +63,21 @@ export function useRequireAuth(options: RequireAuthOptions = {}) {
  */
 export function useRedirectAuthenticated() {
   const router = useRouter();
-  const { session, user, loading } = useAuth();
+  const { session, loading } = useAuth();
 
   useEffect(() => {
-    // Wait for auth to load
     if (loading) {
       return;
     }
 
-    // If authenticated, redirect to dashboard or returnTo
     if (session) {
       router.push("/dashboard");
       return;
     }
-  }, [session, user, loading, router]);
+  }, [session, loading, router]);
 
   return {
     session,
-    user,
     loading,
     isAuthenticated: !!session,
   };
