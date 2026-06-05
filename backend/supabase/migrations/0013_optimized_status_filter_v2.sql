@@ -49,8 +49,7 @@ AS $$
     AND (
         CASE
             WHEN 'pending' = ANY(p_statuses) AND mo.prep_id IS NULL THEN TRUE
-            WHEN 'pending' = ANY(p_statuses) AND mo.prep_id IS NOT NULL AND mo.meeting_status::VARCHAR = ANY(p_statuses) THEN TRUE
-            WHEN 'pending' != ANY(p_statuses) AND mo.meeting_status::VARCHAR = ANY(p_statuses) THEN TRUE
+            WHEN mo.prep_id IS NOT NULL AND mo.meeting_status::VARCHAR = ANY(p_statuses) THEN TRUE
             ELSE FALSE
         END
     )

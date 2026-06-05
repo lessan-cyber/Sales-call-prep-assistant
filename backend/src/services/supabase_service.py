@@ -545,7 +545,9 @@ class SupabaseService:
             for prep in preps_data:
                 # Extract meeting_status from meeting_outcomes (it's a single object due to UNIQUE constraint)
                 if prep.get("meeting_outcomes"):
-                    prep["outcome_status"] = prep["meeting_outcomes"].get("meeting_status")
+                    prep["outcome_status"] = prep["meeting_outcomes"].get(
+                        "meeting_status"
+                    )
                 else:
                     prep["outcome_status"] = None
                 # Remove the nested meeting_outcomes field
@@ -632,8 +634,7 @@ class SupabaseService:
         try:
             # Use the new simplified RPC function
             response = await self.supabase.rpc(
-                "get_dashboard_data_aggregated",
-                {"user_uuid": user_id}
+                "get_dashboard_data_aggregated", {"user_uuid": user_id}
             ).execute()
 
             # Check if the RPC function returns a dict directly or wrapped in a list
@@ -783,18 +784,16 @@ class SupabaseService:
                         )
 
                 # Use RPC with array of statuses - SQL handles pending logic internally
-                response = (
-                    await self.supabase.rpc(
-                        "get_preps_by_status",
-                        {
-                            "p_user_id": user_id,
-                            "p_statuses": status_values,
-                            "p_limit": limit,
-                            "p_offset": offset,
-                            "p_search": search if search else None,
-                        }
-                    ).execute()
-                )
+                response = await self.supabase.rpc(
+                    "get_preps_by_status",
+                    {
+                        "p_user_id": user_id,
+                        "p_statuses": status_values,
+                        "p_limit": limit,
+                        "p_offset": offset,
+                        "p_search": search if search else None,
+                    },
+                ).execute()
                 return response.data if response.data else []
 
             # Apply search
@@ -856,9 +855,9 @@ class SupabaseService:
                         "p_user_id": user_id,
                         "p_statuses": status_values,
                         "p_search": search if search else None,
-                    }
+                    },
                 ).execute()
-                return count_response.data if count_response.data else 0
+                return count_response.data if count_response.data is not None else 0
 
             # No filter - simple count
             query = (
